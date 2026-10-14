@@ -1,0 +1,20 @@
+# Permissions for autonomous runs, in a CLI-neutral form. The adapter translates this into
+# the agent CLI's own permission format and, where the CLI supports it, installs it as a
+# system-wide policy that a target repo's own config can't loosen.
+#
+# The agents act under your own GitHub account, so branch protection can't stop them from
+# merging into develop or main. This deny list and the orchestrator's rules are the guard.
+# Add a `git push origin <branch>*` line for every base or release branch your projects use
+# that isn't listed here.
+mode: allow-all                     # autonomous runs never stop to ask
+deny_commands:
+  - git push --force*
+  - git push -f*
+  - git push origin main*
+  - git push origin master*
+  - git push origin develop*
+  - gh pr merge*--admin*
+  - gh pr review*--approve*
+  - gh api*/merge*                  # direct merge API calls; sub-tasks merge only via gh pr merge --auto
+  - rm -rf /*
+pre_edit_hook: /workspace/workflow/agent/hooks/guard.sh   # runs before every file edit or write

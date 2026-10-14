@@ -1,0 +1,12 @@
+# MCP servers, in a CLI-neutral form; the adapter registers them with the agent CLI.
+# GitHub is handled with the gh CLI rather than an MCP server.
+#
+# env: names of variables passed through from secrets.env to the server.
+servers:
+  jira:                             # community mcp-atlassian; works headless with an API token
+    command: uvx
+    args: [mcp-atlassian]
+    env: [JIRA_URL, JIRA_USERNAME, JIRA_API_TOKEN]
+  playwright:                       # UI inspection for visual-verifier and review-accessibility
+    command: npx
+    args: ["@playwright/mcp@latest", "--headless", "--isolated", "--browser", "chromium"]
