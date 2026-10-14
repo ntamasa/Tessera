@@ -1,0 +1,15 @@
+{
+  "name": "tessera",
+  "private": true,
+  "description": "Node dependencies of Tessera's own scripts (visual verification and accessibility scans)",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "pixelmatch": "8.0.0",
+    "playwright": "1.64.1",
+    "pngjs": "7.0.0"
+  }
+}
