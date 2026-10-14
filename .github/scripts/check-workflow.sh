@@ -48,7 +48,7 @@ for f in agent/skills/architect-plans/SKILL.md prompts/orchestrator.md; do
 done
 
 echo "== templates/AGENTS.md config block"
-bin/wf-config templates | jq -e '.base_branch and (.components | length > 0)' >/dev/null \
+bin/wf-config templates | jq -e '.jira_project and .base_branch and (.components | length > 0)' >/dev/null \
   || problem "templates/AGENTS.md: the config block doesn't parse"
 
 echo "== Node scripts"
