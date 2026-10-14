@@ -1,6 +1,6 @@
 ---
 name: implementer
-description: Implements a Jira sub-task or a fix plan test-first, by following its step-by-step guide: first the tests, then the code that makes them pass.
+description: "Implements a Jira sub-task or a fix plan test-first, by following its step-by-step guide: first the tests, then the code that makes them pass."
 tools: [read, search, edit, shell]
 model: claude-haiku-5-5
 effort: medium
