@@ -1,0 +1,19 @@
+services:
+  agent:
+    build:
+      context: .
+      args:
+        AGENT_CLI: "${AGENT_CLI}"            # from .env: which adapter to install
+        AGENT_UID: "${AGENT_UID:-1000}"      # from .env: owner of ./workspace on the host
+    environment:
+      AGENT_CLI: "${AGENT_CLI}"              # from .env: which adapter bin/agent uses
+    env_file: ./secrets.env                  # never committed
+    volumes:
+      - ./workspace:/workspace               # workflow clone, project clones, state, logs
+      - /var/run/docker.sock:/var/run/docker.sock   # for projects whose tests or app start containers
+      - agent-state:/home/agent/.agent-state        # the agent CLI's config and session logs
+      - mise-data:/home/agent/.local/share/mise     # cached project toolchains
+    mem_limit: 12g
+volumes:
+  agent-state:
+  mise-data:
