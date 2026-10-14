@@ -39,7 +39,7 @@ data folder from the header; "config" is the output of `/workspace/workflow/bin/
    `"escalated_at"` (UTC, ISO 8601), `"escalation": {"check": "<check>", "question": "<the
    question>"}` and `"pr"` if it was just created. Delete /workspace/data/current.json.
 6. **Notify** if the header says push notifications are available: one line under 200
-   characters, `<KEY> blocked on <check>: run answer.sh to answer`.
+   characters, `<KEY> blocked on <check>: run tessera answer`.
 7. Write `{"result":"escalated","ticket":"<KEY>"}` to Data/last-run.json and stop.
 
 ## Rules
