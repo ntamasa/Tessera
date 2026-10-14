@@ -5,10 +5,12 @@ description: Walks the owner through every escalation waiting for an answer and 
 
 # Answer escalations
 
-1. Find every /workspace/data/*/state/*.json with status "awaiting-human" and no matching
-   /workspace/data/<project>/escalations/<KEY>.answer.md. If there are none, say so and stop.
+You run in the project's data folder, /workspace/data.
+
+1. Find every state/*.json with status "awaiting-human" and no matching
+   escalations/<KEY>.answer.md. If there are none, say so and stop.
 2. For each one, oldest `escalated_at` first, show from its escalation record
-   (escalations/<KEY>.md): project and ticket, failing check, the problem in 2–3 sentences, what
+   (escalations/<KEY>.md): the ticket, failing check, the problem in 2–3 sentences, what
    was tried (one line per round), the best guess at the cause, and the screenshot and draft PR
    links for reference.
 3. Ask the record's "What I need from you" question, with its options and recommendation.

@@ -32,15 +32,16 @@ effort: medium
    the design export (HTML, optionally with a `#state` fragment, or an image) and `setup` is a
    command in the target repo that puts the app into that state (or omit it).
    Ask the user to approve the plan. Apply requested changes.
-5. On approval, look up the Jira project for this repo in /workspace/workflow/projects.yaml and
-   create the Epic, Stories and Sub-tasks via the jira MCP, using the two templates verbatim.
+5. On approval, create the Epic, Stories and Sub-tasks in the config's `jira_project` via the
+   jira MCP, using the two templates verbatim.
    Sub-task titles are `[<component>] <summary>`. Add "is blocked by" links (consumer
    sub-tasks are blocked by the provider sub-task that changes the contract; stories are
    blocked by the stories they depend on), labels (`agent-ready`, `comp-<component>`), and
    rank them in dependency order.
-6. Commit the plan (and design/routes.json) on a branch `docs/<epic>-plan`, push it, and open a
-   PR into the config's `base_branch` for the user to merge. Never push to the base or release
-   branch yourself.
+6. Commit the plan (and design/routes.json) on a branch `docs/<epic>-plan` cut from
+   `origin/<base_branch>`, push it, and open a PR into the config's `base_branch` for the user to
+   merge. Then check out `base_branch` again, so the folder is left clean for the next run. Never
+   push to the base or release branch yourself.
 7. Print the created ticket keys and the dependency order.
 
 ## Jira structure
