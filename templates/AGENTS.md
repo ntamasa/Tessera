@@ -34,6 +34,7 @@ Every command runs from the repository root.
 
 ```yaml
 stack: [<short free-form tags>]       # informational, for you and the agents
+jira_project: <KEY>                   # the Jira project that tracks this repo, e.g. ABC
 base_branch: develop                  # integration branch: you merge finished stories here
 release_branch: main                  # only you merge here
 setup: <command that installs toolchain and dependencies after a fresh clone or pull>
@@ -65,7 +66,8 @@ required_checks: [<your CI check names>, test-integrity / check, agent-review]
 ```
 
 <!-- Checklist before the first autonomous ticket:
-- `/workspace/workflow/bin/wf-config .` prints the block above as JSON.
+- `<tessera>/bin/wf-config .` prints the block above as JSON (needs jq and yq; or run it inside
+  `tessera shell` as `/workspace/workflow/bin/wf-config .`).
 - `git grep -E '<case_pattern>' -- <tests.paths>` finds exactly your test cases, and
   `git grep -E '<skip_pattern>' -- <tests.paths>` finds nothing (or only what you expect).
 - Each component has at least one real example of each kind of code and each test level named
