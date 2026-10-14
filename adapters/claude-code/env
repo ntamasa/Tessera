@@ -1,0 +1,7 @@
+# Credentials this adapter needs inside the container, one requirement per line; "A|B" means
+# either one. bin/tessera reads each as TESSERA_<NAME> from your machine's environment and
+# passes it into the container as <NAME>.
+#
+# CLAUDE_CODE_OAUTH_TOKEN: a long-lived token, generated once with `claude setup-token`
+#   (uses your Claude subscription); or ANTHROPIC_API_KEY for API billing.
+CLAUDE_CODE_OAUTH_TOKEN|ANTHROPIC_API_KEY
