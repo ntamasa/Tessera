@@ -1,0 +1,14 @@
+# Secrets: never committed (see secrets.env.example)
+secrets.env
+
+# Mounted into the container as /workspace: clones, state, logs, screenshots
+/workspace/
+
+# Node dependencies for the workflow's own scripts
+node_modules/
+
+# Editor and OS clutter
+.DS_Store
+.idea/
+.vscode/
+*.swp
