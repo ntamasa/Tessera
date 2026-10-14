@@ -1,7 +1,5 @@
-# Secrets: never committed (see secrets.env.example)
-secrets.env
-
-# Mounted into the container as /workspace: clones, state, logs, screenshots
+# Per-project data folders (state, fix plans, escalations, logs, screenshots), mounted into
+# each project's container as /workspace/data. Never in git; back this folder up.
 /workspace/
 
 # Node dependencies for the workflow's own scripts
