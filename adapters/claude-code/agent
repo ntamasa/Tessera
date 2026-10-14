@@ -98,7 +98,8 @@ EOF
     cp "$cfg/managed-settings.json" "$cfg/settings.json"
   fi
 
-  # MCP servers, user scope. Listed env variables are passed through from secrets.env.
+  # MCP servers, user scope. Listed env variables are passed through from the container's
+  # environment, where bin/tessera put them from your TESSERA_* variables.
   while IFS= read -r name; do
     server=$(yq -o=json ".servers.\"$name\"" "$WF/agent/mcp.yaml" | jq -c '{
       type: "stdio", command: .command, args: (.args // []),
