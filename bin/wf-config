@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Usage: wf-config [repo-dir]
+# Prints the "Agent workflow config" block of the repo's AGENTS.md as JSON. The single reader of
+# the config block, used by every script and hook.
+set -euo pipefail
+file=${1:-.}/AGENTS.md
+[[ -f "$file" ]] || { echo "wf-config: $file not found" >&2; exit 1; }
+
+block=$(awk '/^## Agent workflow config/{s=1} s&&/^```yaml/{f=1;next} f&&/^```/{exit} f' "$file")
+[[ -n "$block" ]] \
+  || { echo "wf-config: no \`\`\`yaml block under '## Agent workflow config' in $file" >&2; exit 1; }
+
+yq -o=json '.' <<< "$block"

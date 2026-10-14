@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Usage: frontmatter <file> <field>
+# Prints one field of a Markdown file's YAML front matter, or nothing if it isn't set.
+# Used to read the model and effort of the orchestrator prompt and the architect-plans skill.
+set -euo pipefail
+awk 'NR==1 && /^---$/ {f=1; next} f && /^---$/ {exit} f' "$1" | yq -r ".$2 // \"\""
