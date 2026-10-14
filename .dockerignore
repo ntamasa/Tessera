@@ -1,0 +1,4 @@
+# The workflow is baked into the image; none of this belongs there
+.git
+workspace
+node_modules

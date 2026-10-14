@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# Usage: tessera <command>          (run from inside the project you want Tessera to work on)
+#
+#   run            the autonomous run: works the project's ready tickets one by one (cron)
+#   plan <spec>    plan an epic from a spec in the project, with you (interactive)
+#   answer         answer the escalations waiting for you (interactive); answered tickets
+#                  resume as soon as you close the session
+#   resume         resume answered escalations (cron, every 30 minutes)
+#   shell          a shell in the project's container, for guard tests and supervised runs
+#
+# Starts the project's own Tessera container on the project folder itself. Every project has
+# its own container, data folder and agent config, so several projects can run in parallel;
+# one project runs one container at a time.
+#
+# All configuration comes from environment variables on your machine, prefixed TESSERA_ so
+# they never affect your own gh, claude or Jira tools. See "Configuration" in the README.
+set -euo pipefail
+TESSERA=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+WF=/workspace/workflow
+die() { echo "tessera: $*" >&2; exit 1; }
+usage="usage: tessera <run | plan <spec> | answer | resume | shell>"
+
+cmd=${1:-}; shift || true
+case "$cmd" in
+  run)    inner=("$WF/bin/run-daily.sh") ;;
+  plan)   [[ $# -eq 1 ]] || die "usage: tessera plan <spec path inside the project>"
+          inner=("$WF/bin/plan.sh" "$1") ;;
+  answer) inner=("$WF/bin/answer.sh") ;;
+  resume) inner=("$WF/bin/check-feedback.sh") ;;
+  shell)  inner=(bash -c "$WF/bin/bootstrap.sh && exec bash") ;;
+  *)      die "$usage" ;;
+esac
+
+# --- The project: the git repository around the current folder -------------------------------
+project_dir=$(git rev-parse --show-toplevel 2>/dev/null) \
+  || die "run tessera from inside the git repository of the project it should work on"
+[[ -f "$project_dir/AGENTS.md" ]] \
+  || die "$project_dir has no AGENTS.md; onboard the project first (see templates/AGENTS.md)"
+remote=$(git -C "$project_dir" remote get-url origin 2>/dev/null) \
+  || die "$project_dir has no 'origin' remote"
+name=$(basename "$remote" .git | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
+
+# A run switches branches and commits in this folder, so it must start from a clean one.
+if [[ "$cmd" != shell && -n "$(git -C "$project_dir" status --porcelain)" ]]; then
+  die "$project_dir has uncommitted changes. Commit or stash them first: Tessera switches branches in this folder."
+fi
+
+# --- Configuration from environment variables -------------------------------------------------
+# need NAME[|NAME...]: passes TESSERA_<NAME> into the container as <NAME>; at least one is required
+pass=(); missing=()
+need() {
+  local alt found="" src
+  IFS='|' read -ra alts <<< "$1"
+  for alt in "${alts[@]}"; do
+    src=TESSERA_$alt
+    if [[ -n "${!src:-}" ]]; then export "$alt=${!src}"; pass+=(-e "$alt"); found=1; fi
+  done
+  [[ -n "$found" ]] || missing+=("TESSERA_${1//|/ or TESSERA_}")
+}
+
+export AGENT_CLI=${TESSERA_AGENT_CLI:-claude-code}
+[[ -f "$TESSERA/adapters/$AGENT_CLI/env" ]] || die "no adapter '$AGENT_CLI' in $TESSERA/adapters"
+for v in GH_TOKEN JIRA_URL JIRA_USERNAME JIRA_API_TOKEN; do need "$v"; done
+while IFS= read -r line; do                       # the adapter's own credentials
+  [[ -z "$line" || "$line" == \#* ]] || need "$line"
+done < "$TESSERA/adapters/$AGENT_CLI/env"
+
+# Commits are authored as you: your git identity unless TESSERA_GIT_NAME/EMAIL say otherwise
+export GIT_NAME=${TESSERA_GIT_NAME:-$(git config user.name || true)}
+export GIT_EMAIL=${TESSERA_GIT_EMAIL:-$(git config user.email || true)}
+[[ -n "$GIT_NAME" ]] || missing+=(TESSERA_GIT_NAME)
+[[ -n "$GIT_EMAIL" ]] || missing+=(TESSERA_GIT_EMAIL)
+pass+=(-e GIT_NAME -e GIT_EMAIL)
+
+if (( ${#missing[@]} )); then
+  printf 'tessera: these environment variables are not set on this machine:\n' >&2
+  printf '  %s\n' "${missing[@]}" >&2
+  die "set them as described under \"Configuration\" in $TESSERA/README.md"
+fi
+
+# --- Paths and the container ------------------------------------------------------------------
+# Git Bash on Windows: hand Docker Windows paths, and don't rewrite the container's paths
+export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'
+hostpath() { if command -v cygpath >/dev/null; then cygpath -m "$1"; else printf '%s\n' "$1"; fi; }
+
+data=$TESSERA/workspace/$name
+mkdir -p "$data"
+export TESSERA_PROJECT=$name
+export TESSERA_HOST_PROJECT_DIR; TESSERA_HOST_PROJECT_DIR=$(hostpath "$project_dir")
+export TESSERA_HOST_DATA_DIR; TESSERA_HOST_DATA_DIR=$(hostpath "$data")
+if [[ "$(uname -s)" == Linux ]]; then export AGENT_UID; AGENT_UID=$(id -u); else export AGENT_UID=1000; fi
+
+container=tessera-$name
+compose=(docker compose -f "$(hostpath "$TESSERA/docker-compose.yml")" -p "$container")
+
+# One container per project at a time: its fixed name is the lock
+if [[ -n "$(docker ps -q --filter "name=^${container}$")" ]]; then
+  [[ "$cmd" == resume ]] && exit 0                # cron fallback: try again in 30 minutes
+  die "Tessera is already running for $name (container $container). Wait for it to finish."
+fi
+docker rm -f "$container" >/dev/null 2>&1 || true # a leftover from a crash
+
+"${compose[@]}" build --quiet agent               # cached; rebuilds after Tessera changes
+
+tty=(); [[ -t 0 && -t 1 ]] || tty=(-T)            # cron has no terminal
+exec "${compose[@]}" run --rm --name "$container" "${tty[@]}" "${pass[@]}" agent "${inner[@]}"

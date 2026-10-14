@@ -1,19 +1,25 @@
+# Started by bin/tessera, never directly. The launcher runs every project under its own Compose
+# project name (tessera-<project>), sets the TESSERA_HOST_* paths, and passes credentials in
+# from your environment with `-e`, so nothing secret is written in this file or on disk.
 services:
   agent:
     build:
       context: .
       args:
-        AGENT_CLI: "${AGENT_CLI}"            # from .env: which adapter to install
-        AGENT_UID: "${AGENT_UID:-1000}"      # from .env: owner of ./workspace on the host
+        AGENT_CLI: "${AGENT_CLI:?start Tessera with bin/tessera}"
+        AGENT_UID: "${AGENT_UID:-1000}"
+    image: "tessera:${AGENT_CLI}"
     environment:
-      AGENT_CLI: "${AGENT_CLI}"              # from .env: which adapter bin/agent uses
-    env_file: ./secrets.env                  # never committed
+      AGENT_CLI: "${AGENT_CLI}"                 # which adapter bin/agent uses
+      TESSERA_PROJECT: "${TESSERA_PROJECT}"     # the project's name
     volumes:
-      - ./workspace:/workspace               # workflow clone, project clones, state, logs
+      - "${TESSERA_HOST_PROJECT_DIR:?start Tessera with bin/tessera}:/workspace/project"
+      - "${TESSERA_HOST_DATA_DIR:?start Tessera with bin/tessera}:/workspace/data"
       - /var/run/docker.sock:/var/run/docker.sock   # for projects whose tests or app start containers
       - agent-state:/home/agent/.agent-state        # the agent CLI's config and session logs
       - mise-data:/home/agent/.local/share/mise     # cached project toolchains
     mem_limit: 12g
 volumes:
-  agent-state:
+  agent-state:            # per project: Compose prefixes it with tessera-<project>
   mise-data:
+    name: tessera-mise    # shared by every project, so each toolchain is downloaded once
