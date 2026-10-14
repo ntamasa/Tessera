@@ -53,10 +53,10 @@ export function pickComponent(cfg, name) {
   return ui[0];
 }
 
-// Folder for this project's screenshots and reports: <data>/<project>/screenshots/<ticket>
-export function screenshotDir(repo, ticket) {
-  const project = current().project ?? path.basename(repo);
-  return path.join(DATA, project, 'screenshots', ticket);
+// Folder for a ticket's screenshots and reports: <data>/screenshots/<ticket>. The container's
+// data folder belongs to its one project.
+export function screenshotDir(ticket) {
+  return path.join(DATA, 'screenshots', ticket);
 }
 
 // design/routes.json entries of one ticket

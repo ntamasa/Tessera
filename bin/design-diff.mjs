@@ -11,7 +11,7 @@
 //      interactive elements, text within its container, tap targets >= 44px on the smallest
 //      viewport, and every design token (color, background, font size and weight, spacing)
 //      the HTML design uses also used by the app.
-// Writes design/actual/diff screenshots and result.json to <data>/<project>/screenshots/<ticket>/.
+// Writes design/actual/diff screenshots and result.json to <data>/screenshots/<ticket>/.
 // Exit code: 0 pass, 1 differences, 2 usage or setup error.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -131,7 +131,7 @@ async function main() {
   const viewports = component.ui.viewports ?? DEFAULT_VIEWPORTS;
   const threshold = Number(args.threshold ?? component.ui.diff_threshold ?? 0.015);
   const smallest = Math.min(...viewports.map(([w]) => w));
-  const out = screenshotDir(args.repo, args.ticket);
+  const out = screenshotDir(args.ticket);
   mkdirSync(out, { recursive: true });
 
   const app = await startApp(args.repo, component);
