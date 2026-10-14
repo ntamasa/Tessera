@@ -167,7 +167,7 @@ into the story branch, and the story check updates the PR and notifies the owner
 ## Notifications
 If the header says push notifications are available, send one line under 200 characters,
 starting with what the owner must do (for an escalation: "<KEY> blocked on <step>: run
-answer.sh to answer"; for a story: "<STORY-KEY> ready for your review: <PR link>"). Otherwise
+tessera answer"; for a story: "<STORY-KEY> ready for your review: <PR link>"). Otherwise
 skip it. Notify only for a new escalation and for a story PR ready for review, never for
 routine progress.
 
