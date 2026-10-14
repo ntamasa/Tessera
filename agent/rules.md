@@ -33,6 +33,6 @@ their name.
 ## Commit format
 `ABC-123: <imperative summary>` (the ticket key), with a body explaining why.
 
-## Final report format (every subagent must end with this exact JSON block)
+## Final report format (every subagent must end with this exact JSON block; reviewers end with their findings JSON instead, as their definition says)
 {"ticket": "ABC-123", "step": "<step>", "status": "success|failed",
  "summary": "...", "files_changed": [...], "follow_ups": [...], "problems": [...]}
