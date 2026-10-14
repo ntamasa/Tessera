@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Usage: diff-hunks <base> [head]                         (run from the target repo root)
+#        diff-hunks <base> <head> --check <reviewer.json>
+#
+# GitHub only accepts an inline PR comment on a line inside a diff hunk, on the right-hand
+# side. The first form prints the right-hand line range of every hunk of `git diff
+# <base>...<head>` (default context, as GitHub shows it) as JSON: [{"file", "start", "end"}].
+# Reviewers use it to anchor findings.
+#
+# The second form is the orchestrator's anchor check: it reads one reviewer's output
+# ({"reviewer", "findings": [...]}) and prints it back with `"anchored": true|false` on every
+# finding. A finding is anchored when `start_line` (or `line`) and `line` lie in the same hunk.
+set -euo pipefail
+base=${1:?usage: diff-hunks <base> [head] [--check <reviewer.json>]}
+head=${2:-HEAD}
+
+hunks=$(git diff --no-color --no-ext-diff "$base...$head" | awk '
+  /^\+\+\+ / { file = substr($0, 5); sub(/^b\//, "", file); if (file == "/dev/null") file = ""; next }
+  /^@@ / && file != "" {
+    split($3, r, ",")                       # $3 is "+start[,count]"
+    start = substr(r[1], 2) + 0; count = (r[2] == "" ? 1 : r[2] + 0)
+    if (count > 0) printf "{\"file\":\"%s\",\"start\":%d,\"end\":%d}\n", file, start, start + count - 1
+  }' | jq -s -c '.')
+
+if [[ "${3:-}" == --check ]]; then
+  jq --argjson hunks "$hunks" '.findings |= map(
+      . as $f | ($f.start_line // $f.line) as $s
+      | .anchored = (($f.file | type) == "string" and ($f.line | type) == "number" and $s <= $f.line
+                     and any($hunks[]; .file == $f.file and .start <= $s and $f.line <= .end)))' "${4:?missing reviewer.json}"
+else
+  jq '.' <<< "$hunks"
+fi
