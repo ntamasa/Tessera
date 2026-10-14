@@ -1,0 +1,25 @@
+# Reusable workflow that every target repo's CI calls:
+#
+#   test-integrity:
+#     uses: ntamasa/Tessera/.github/workflows/test-integrity.yml@main
+#
+# It fails a PR whose test count drops without the owner's approval, or that skips, disables
+# or focuses a test, using the case_pattern and skip_pattern from the target repo's AGENTS.md.
+# If this repository is private, allow access to its workflows from your other repositories
+# (Settings -> Actions -> General -> Access).
+name: test-integrity
+on: workflow_call
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          repository: ntamasa/Tessera
+          path: .agent-workflow
+      # jq and yq are preinstalled on ubuntu-latest
+      - run: .agent-workflow/bin/check-test-integrity.sh "origin/${{ github.base_ref }}"
