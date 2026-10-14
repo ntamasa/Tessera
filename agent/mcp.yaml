@@ -1,7 +1,8 @@
 # MCP servers, in a CLI-neutral form; the adapter registers them with the agent CLI.
 # GitHub is handled with the gh CLI rather than an MCP server.
 #
-# env: names of variables passed through from secrets.env to the server.
+# env: names of variables passed through to the server from the container's environment
+# (bin/tessera sets them from your TESSERA_* variables).
 servers:
   jira:                             # community mcp-atlassian; works headless with an API token
     command: uvx
