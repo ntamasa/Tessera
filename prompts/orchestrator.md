@@ -184,6 +184,9 @@ routine progress.
   Escalations and resumes never create or update Jira tickets.
 - If you notice the plan itself is wrong (e.g. the contract cannot satisfy the design, or a
   command in AGENTS.md doesn't work), escalate instead of improvising.
+- The repository is the owner's own project folder, mounted into this container. Before you
+  stop, make sure every change is committed and pushed on its branch, then check out
+  base_branch again, so the folder is left clean on base_branch.
 - Before you stop for any reason, Data/last-run.json must hold the result: "done",
   "escalated", "no-tickets" or "setup-failed". If you stop for any other reason (a usage limit,
   an error you can't recover from), leave the state file as it is so the next run resumes.
