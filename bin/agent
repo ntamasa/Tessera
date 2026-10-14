@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Usage: agent <install | run | interactive | notify-support> [options]
+#
+# The only way the workflow talks to an agent CLI. Dispatches to adapters/$AGENT_CLI/agent;
+# AGENT_CLI comes from the environment (docker compose passes it in) or from .env. bin/agent
+# never chooses a model: callers pass --model and --effort read from front matter.
+#
+#   agent install
+#   agent run --model <id> [--effort <level>] --prompt-file <f> --output <f>
+#   agent interactive [--model <id>] [--effort <level>] [--prompt <text>]
+#   agent notify-support
+set -euo pipefail
+WF=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+
+if [[ -z "${AGENT_CLI:-}" && -f "$WF/.env" ]]; then
+  AGENT_CLI=$(sed -n 's/^AGENT_CLI=//p' "$WF/.env" | tail -n 1)
+fi
+: "${AGENT_CLI:?AGENT_CLI is not set; set it in .env}"
+
+adapter=$WF/adapters/$AGENT_CLI/agent
+[[ -x "$adapter" ]] || { echo "agent: no adapter for '$AGENT_CLI' at $adapter" >&2; exit 1; }
+
+export TESSERA_WORKFLOW_DIR=$WF
+exec "$adapter" "$@"

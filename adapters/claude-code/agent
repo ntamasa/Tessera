@@ -1,0 +1,195 @@
+#!/usr/bin/env bash
+# Claude Code adapter. Implements the entry points of bin/agent (see bin/agent for usage).
+# This is the only file in the workflow that knows Claude Code's flags, file formats and
+# config locations.
+set -euo pipefail
+WF=${TESSERA_WORKFLOW_DIR:-/workspace/workflow}
+DATA=${TESSERA_DATA_DIR:-/workspace/data}
+HERE=$WF/adapters/claude-code
+
+# Keep the CLI's config, credentials and session logs on the persistent agent-state volume.
+export CLAUDE_CONFIG_DIR=${CLAUDE_CONFIG_DIR:-/home/agent/.agent-state/claude}
+export DISABLE_AUTOUPDATER=1   # the image pins the CLI; upgrades happen by rebuilding it
+MANAGED_LINK=/etc/claude-code/managed-settings.json
+
+die() { echo "agent (claude-code): $*" >&2; exit 1; }
+
+# --- install ----------------------------------------------------------------------------
+# Translates the CLI-neutral sources in agent/ into Claude Code's formats and locations.
+# Idempotent: everything it writes is owned by the workflow and rewritten on every run.
+
+# Neutral tool groups (agent front matter) -> Claude Code tool names
+tool_names() {
+  case "$1" in
+    read)    echo Read ;;
+    search)  echo Grep Glob ;;
+    edit)    echo Edit Write NotebookEdit ;;
+    shell)   echo Bash ;;
+    browser) echo mcp__playwright ;;
+    jira)    echo mcp__jira ;;
+    *)       return 1 ;;
+  esac
+}
+
+install_agent() {   # install_agent <neutral agent file> <destination>
+  local src=$1 dst=$2 fm body group mapped names=()
+  fm=$(awk 'NR==1 && /^---$/ {f=1; next} f && /^---$/ {exit} f' "$src")
+  body=$(awk 'NR==1 && /^---$/ {f=1; next} f && /^---$/ {f=0; b=1; next} b' "$src")
+  yq -e 'type == "!!map"' <<< "$fm" >/dev/null 2>&1 || die "invalid YAML front matter in $src"
+  while IFS= read -r group; do
+    mapped=$(tool_names "$group") || die "unknown tool group '$group' in $src"
+    read -ra mapped <<< "$mapped"
+    names+=("${mapped[@]}")
+  done < <(yq -r '.tools[]?' <<< "$fm")
+  if (( ${#names[@]} )); then
+    # model and effort are kept as they are: Claude Code reads both from subagent front matter
+    fm=$(TOOLS=$(printf '%s, ' "${names[@]}" | sed 's/, $//') yq '.tools = strenv(TOOLS)' <<< "$fm")
+  fi
+  printf -- '---\n%s\n---\n%s\n' "$fm" "$body" > "$dst"
+}
+
+settings_json() {   # agent/policy.yaml -> Claude Code settings (permissions + pre-edit hook)
+  yq -o=json "$WF/agent/policy.yaml" | jq --arg shim "$HERE/hook-shim.sh" '{
+    permissions: {
+      defaultMode: (if .mode == "allow-all" then "bypassPermissions" else "default" end),
+      deny: [.deny_commands[]? | "Bash(\(.))"]
+    },
+    hooks: (if .pre_edit_hook then {
+      PreToolUse: [{
+        matcher: "Edit|Write|MultiEdit|NotebookEdit",
+        hooks: [{type: "command", command: "\($shim) \(.pre_edit_hook)"}]
+      }]
+    } else {} end)
+  }'
+}
+
+cmd_install() {
+  local cfg=$CLAUDE_CONFIG_DIR f name server
+  mkdir -p "$cfg"
+
+  # Workflow rules -> global instructions
+  { cat "$WF/agent/rules.md"
+    cat <<'EOF'
+
+## Project instructions
+If the target repository's AGENTS.md is not already in your context, read ./AGENTS.md before
+anything else.
+EOF
+  } > "$cfg/CLAUDE.md"
+
+  # Subagents, keeping each file's model and effort
+  rm -rf "$cfg/agents"; mkdir -p "$cfg/agents"
+  for f in "$WF"/agent/agents/*.md; do
+    install_agent "$f" "$cfg/agents/$(basename "$f")"
+  done
+
+  # Skills (architect-plans keeps its model and effort)
+  rm -rf "$cfg/skills"; mkdir -p "$cfg/skills"
+  cp -R "$WF"/agent/skills/. "$cfg/skills/"
+
+  # Permissions and the pre-edit hook. Installed as the managed policy when install-cli.sh
+  # linked it there (in the image), so a target repo's own settings can't loosen it; as user
+  # settings otherwise. Never both, so the hook doesn't run twice.
+  settings_json > "$cfg/managed-settings.json"
+  if [[ "$(readlink -f "$MANAGED_LINK" 2>/dev/null)" == "$(readlink -f "$cfg/managed-settings.json")" ]]; then
+    echo '{}' > "$cfg/settings.json"
+  else
+    echo "agent (claude-code): $MANAGED_LINK isn't linked; installing the policy as user settings" >&2
+    cp "$cfg/managed-settings.json" "$cfg/settings.json"
+  fi
+
+  # MCP servers, user scope. Listed env variables are passed through from secrets.env.
+  while IFS= read -r name; do
+    server=$(yq -o=json ".servers.\"$name\"" "$WF/agent/mcp.yaml" | jq -c '{
+      type: "stdio", command: .command, args: (.args // []),
+      env: ([.env[]? | {key: ., value: ($ENV[.] // "")} | select(.value != "")] | from_entries)
+    }')
+    claude mcp remove -s user "$name" >/dev/null 2>&1 || true
+    claude mcp add-json -s user "$name" "$server" >/dev/null
+  done < <(yq -r '.servers | keys | .[]' "$WF/agent/mcp.yaml")
+
+  # Skip the first-run screens: nobody is there to click through them in a headless run
+  f=$cfg/.claude.json
+  [[ -s "$f" ]] || echo '{}' > "$f"
+  jq '.hasCompletedOnboarding = true | .bypassPermissionsModeAccepted = true' "$f" > "$f.tmp"
+  mv "$f.tmp" "$f"
+}
+
+# --- run ----------------------------------------------------------------------------------
+# One headless session in the current directory, all permissions, normalized JSON output.
+cmd_run() {
+  local model="" effort="" prompt_file="" output="" code=0 raw err
+  while (( $# )); do
+    case "$1" in
+      --model) model=$2; shift 2 ;;
+      --effort) effort=$2; shift 2 ;;
+      --prompt-file) prompt_file=$2; shift 2 ;;
+      --output) output=$2; shift 2 ;;
+      *) die "run: unknown option $1" ;;
+    esac
+  done
+  [[ -n "$model" && -f "$prompt_file" && -n "$output" ]] \
+    || die "usage: agent run --model <id> [--effort <level>] --prompt-file <f> --output <f>"
+
+  local args=(-p --output-format json --permission-mode bypassPermissions
+              --add-dir "$WF" --add-dir "$DATA" --model "$model")
+  [[ -n "$effort" ]] && args+=(--effort "$effort")
+
+  raw=$(mktemp); err=$(mktemp)
+  claude "${args[@]}" < "$prompt_file" > "$raw" 2> >(tee "$err" >&2) || code=$?
+  jq -e 'type == "object"' "$raw" >/dev/null 2>&1 || echo '{}' > "$raw"
+
+  # {"is_error", "limit_hit", "usage": {"input_tokens", "output_tokens"}}, plus extras for logs.
+  # Usage sums every model the session used (subagents included); input counts cache tokens.
+  jq -n --slurpfile r "$raw" --rawfile e "$err" --argjson code "$code" '
+    $r[0] as $o
+    | ([($o.modelUsage // {})[]]) as $mu
+    | (($o.is_error // true) or $code != 0) as $failed
+    | {
+        is_error: $failed,
+        limit_hit: ($failed and ((($o.result // "") + "\n" + $e)
+                    | test("usage limit|limit reached|rate.?limit"; "i"))),
+        usage: (if ($mu | length) > 0 then {
+                  input_tokens: ($mu | map((.inputTokens // 0) + (.cacheReadInputTokens // 0)
+                                           + (.cacheCreationInputTokens // 0)) | add),
+                  output_tokens: ($mu | map(.outputTokens // 0) | add)
+                } else {
+                  input_tokens: (($o.usage.input_tokens // 0) + ($o.usage.cache_read_input_tokens // 0)
+                                 + ($o.usage.cache_creation_input_tokens // 0)),
+                  output_tokens: ($o.usage.output_tokens // 0)
+                } end),
+        cost_usd: ($o.total_cost_usd // null),
+        session_id: ($o.session_id // null),
+        result: ($o.result // null)
+      }' > "$output"
+  rm -f "$raw" "$err"
+  return "$code"
+}
+
+# --- interactive --------------------------------------------------------------------------
+cmd_interactive() {
+  local args=(--permission-mode bypassPermissions --add-dir "$WF" --add-dir "$DATA") prompt=""
+  while (( $# )); do
+    case "$1" in
+      --model) args+=(--model "$2"); shift 2 ;;
+      --effort) args+=(--effort "$2"); shift 2 ;;
+      --prompt) prompt=$2; shift 2 ;;
+      *) die "interactive: unknown option $1" ;;
+    esac
+  done
+  [[ -n "$prompt" ]] && args+=("$prompt")
+  exec claude "${args[@]}"
+}
+
+# --- notify-support -----------------------------------------------------------------------
+# Headless Claude Code sessions have a push-notification tool (best effort: it reaches a phone
+# only through Remote Control).
+cmd_notify_support() { echo available; }
+
+case "${1:-}" in
+  install) shift; cmd_install "$@" ;;
+  run) shift; cmd_run "$@" ;;
+  interactive) shift; cmd_interactive "$@" ;;
+  notify-support) shift; cmd_notify_support "$@" ;;
+  *) die "usage: agent <install|run|interactive|notify-support> [options]" ;;
+esac
