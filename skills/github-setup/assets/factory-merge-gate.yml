@@ -1,0 +1,195 @@
+# Factory merge gate. Installed by the github-setup skill; don't edit by hand, rerun github-setup instead.
+# Branch and PR model: ~/.claude/references/branches.md
+#
+# Merges an open PR labelled "factory" (and not "factory-stopped") when, for its CURRENT head commit:
+#   - every reviewer in the PR body's <!-- factory-reviewers: ... --> marker has a valid pass comment
+#     (<!-- factory-review reviewer=<id> verdict=pass head=<sha> -->, by an owner, member or collaborator).
+#     A pass for an older head stays valid only if every newer commit is a merge of the target branch
+#     or the cleanup commit (deletes planning files only);
+#   - it has no "needs-human-review" label, or it also has "human-approved";
+#   - a final PR (<!-- factory-final -->) no longer adds or changes any planning file (cleanup is in);
+#   - it is up to date with its target (if not, the gate merges the target into it and waits for CI);
+#   - every other check and status on the head commit is green, and there's no merge conflict.
+# A new push that isn't exempt removes "human-approved".
+#
+# Needs the repo secret FACTORY_GATE_TOKEN (a token of a user with write access): branch updates and merges
+# made with it trigger CI, which GitHub's own token doesn't.
+# issue_comment and schedule run the copy of this file on the DEFAULT branch: keep it there and on develop.
+
+name: factory-merge-gate
+
+on:
+  issue_comment:
+    types: [created, edited]
+  pull_request:
+    types: [synchronize, labeled, unlabeled, reopened, ready_for_review]
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: factory-merge-gate-${{ github.event.pull_request.number || github.event.issue.number || 'sweep' }}
+  cancel-in-progress: false
+
+jobs:
+  merge-gate:
+    if: github.event_name != 'issue_comment' || github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      HAS_TOKEN: ${{ secrets.FACTORY_GATE_TOKEN != '' }}
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.FACTORY_GATE_TOKEN || github.token }}
+          script: |
+            const { owner, repo } = context.repo;
+            const SELF = 'merge-gate';
+            const TRUSTED = ['OWNER', 'MEMBER', 'COLLABORATOR'];
+            const TEMP = [/(^|\/)intent\.md$/, /(^|\/)design-brief\.md$/, /(^|\/)spec\.md$/, /(^|\/)design-changes\.md$/,
+              /(^|\/)tickets\.json$/, /(^|\/)tickets\/[^/]+\.md$/, /^design\/screenshots\/[^/]+_deprecated\.png$/];
+            const isTemp = (f) => TEMP.some((re) => re.test(f));
+            const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+            if (process.env.HAS_TOKEN !== 'true') {
+              core.warning('FACTORY_GATE_TOKEN is not set: the gate does nothing. Run the github-setup skill.');
+              return;
+            }
+
+            async function prNumbers() {
+              if (context.eventName === 'pull_request') return [context.payload.pull_request.number];
+              if (context.eventName === 'issue_comment') return [context.payload.issue.number];
+              const prs = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', per_page: 100 });
+              return prs.filter((p) => p.labels.some((l) => l.name === 'factory')).map((p) => p.number);
+            }
+
+            async function commentOnce(number, comments, marker, text) {
+              if (comments.some((c) => (c.body || '').includes(marker))) return;
+              await github.rest.issues.createComment({ owner, repo, issue_number: number, body: `${text}\n${marker}` });
+            }
+
+            // True if every commit in from..to is a merge of the target branch or the cleanup commit.
+            async function onlyExempt(from, to, targetSha) {
+              if (to.startsWith(from)) return true;
+              let cmp;
+              try { ({ data: cmp } = await github.rest.repos.compareCommitsWithBasehead({ owner, repo, basehead: `${from}...${to}`, per_page: 100 })); }
+              catch { return false; }
+              if (cmp.status !== 'ahead' || cmp.total_commits > cmp.commits.length) return false;
+              for (const c of cmp.commits) {
+                if (c.parents.length === 2) {
+                  const { data: x } = await github.rest.repos.compareCommitsWithBasehead({ owner, repo, basehead: `${c.parents[1].sha}...${targetSha}` });
+                  if (!['ahead', 'identical'].includes(x.status)) return false;
+                  continue;
+                }
+                // The cleanup commit: one parent, and it only deletes planning files. Its message doesn't matter.
+                if (c.parents.length !== 1) return false;
+                const { data: full } = await github.rest.repos.getCommit({ owner, repo, ref: c.sha });
+                if (!full.files.length || !full.files.every((f) => f.status === 'removed' && isTemp(f.filename))) return false;
+              }
+              return true;
+            }
+
+            async function gate(number) {
+              const say = (m) => core.info(`#${number}: ${m}`);
+              let { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: number });
+              const labels = pr.labels.map((l) => l.name);
+              if (pr.state !== 'open' || pr.draft || !labels.includes('factory')) return say('not an open factory PR');
+              if (labels.includes('factory-stopped')) return say('stopped by a loop cap: a human finishes it');
+              const head = pr.head.sha;
+              const { data: target } = await github.rest.repos.getBranch({ owner, repo, branch: pr.base.ref });
+              const targetSha = target.commit.sha;
+
+              if (context.eventName === 'pull_request' && context.payload.action === 'synchronize' && labels.includes('human-approved')) {
+                if (!(await onlyExempt(context.payload.before, context.payload.after, targetSha))) {
+                  await github.rest.issues.removeLabel({ owner, repo, issue_number: number, name: 'human-approved' }).catch(() => {});
+                  return say('new commits: removed human-approved');
+                }
+              }
+
+              const m = (pr.body || '').match(/<!--\s*factory-reviewers:\s*([\w,\s-]+?)\s*-->/);
+              if (!m) return say('no factory-reviewers marker in the PR body');
+              const required = m[1].split(',').map((s) => s.trim()).filter(Boolean);
+              const isFinal = /<!--\s*factory-final\s*-->/.test(pr.body || '');
+
+              const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number: number, per_page: 100 });
+              const latest = {};
+              for (const c of comments) {
+                if (!TRUSTED.includes(c.author_association)) continue;
+                const re = /<!--\s*factory-review\s+reviewer=([\w-]+)\s+verdict=(pass|changes)\s+head=([0-9a-f]{7,40})\s*-->/g;
+                for (const x of (c.body || '').matchAll(re)) latest[x[1]] = { verdict: x[2], sha: x[3] };
+              }
+              const valid = {};
+              const missing = [];
+              for (const r of required) {
+                const v = latest[r];
+                if (!v) { missing.push(`${r} (no review yet)`); continue; }
+                if (v.verdict !== 'pass') { missing.push(`${r} (changes requested)`); continue; }
+                if (!(v.sha in valid)) valid[v.sha] = await onlyExempt(v.sha, head, targetSha);
+                if (!valid[v.sha]) missing.push(`${r} (passed an older commit)`);
+              }
+              if (missing.length) return say(`waiting for ${missing.join(', ')}`);
+
+              if (labels.includes('needs-human-review') && !labels.includes('human-approved')) return say('waiting for the human-approved label');
+
+              if (isFinal) {
+                const files = await github.paginate(github.rest.pulls.listFiles, { owner, repo, pull_number: number, per_page: 100 });
+                const left = files.filter((f) => f.status !== 'removed' && isTemp(f.filename)).map((f) => f.filename);
+                if (left.length) return say(`waiting for the cleanup commit: ${left.length} planning files left`);
+              }
+
+              const { data: upToDate } = await github.rest.repos.compareCommitsWithBasehead({ owner, repo, basehead: `${head}...${targetSha}` });
+              if (['ahead', 'diverged'].includes(upToDate.status)) {
+                try {
+                  await github.rest.pulls.updateBranch({ owner, repo, pull_number: number, expected_head_sha: head });
+                  return say(`behind ${pr.base.ref}: merged it in; CI and the gate run again on the new head`);
+                } catch (e) {
+                  await commentOnce(number, comments, `<!-- factory-gate conflict head=${head} -->`,
+                    `## ⛔ Merge gate: merge conflict\n\`${pr.head.ref}\` can't be updated from \`${pr.base.ref}\`. A human has to resolve it.`);
+                  return say(`update failed: ${e.message}`);
+                }
+              }
+
+              const deadline = Date.now() + 30 * 60 * 1000;
+              for (;;) {
+                const runs = (await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: head, per_page: 100 })).filter((r) => r.name !== SELF);
+                const { data: combined } = await github.rest.repos.getCombinedStatusForRef({ owner, repo, ref: head });
+                const failed = runs.filter((r) => r.status === 'completed' && !['success', 'neutral', 'skipped'].includes(r.conclusion)).map((r) => r.name)
+                  .concat(combined.statuses.filter((s) => ['failure', 'error'].includes(s.state)).map((s) => s.context));
+                if (failed.length) {
+                  await commentOnce(number, comments, `<!-- factory-gate ci-failed head=${head} -->`,
+                    `## ⛔ Merge gate: CI failed\nFailing on \`${head.slice(0, 7)}\`: ${failed.join(', ')}`);
+                  return say(`CI failed: ${failed.join(', ')}`);
+                }
+                const pending = runs.some((r) => r.status !== 'completed') || combined.statuses.some((s) => s.state === 'pending');
+                if (!pending) break;
+                if (Date.now() > deadline) return say('CI still running after 30 minutes: the next event or sweep retries');
+                await sleep(30000);
+              }
+
+              for (let i = 0; i < 12; i++) {
+                ({ data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: number }));
+                if (pr.mergeable !== null) break;
+                await sleep(5000);
+              }
+              if (pr.state !== 'open' || pr.head.sha !== head) return say('the PR changed while waiting: the next event retries');
+              if (pr.mergeable === false) {
+                await commentOnce(number, comments, `<!-- factory-gate conflict head=${head} -->`,
+                  `## ⛔ Merge gate: merge conflict\n\`${pr.head.ref}\` conflicts with \`${pr.base.ref}\`. A human has to resolve it.`);
+                return say('merge conflict');
+              }
+
+              await github.rest.pulls.merge({ owner, repo, pull_number: number, sha: head, merge_method: 'merge' });
+              await github.rest.issues.createComment({ owner, repo, issue_number: number,
+                body: `## ✅ Merge gate: merged into \`${pr.base.ref}\`\nEvery required reviewer passed: ${required.join(', ')}.` });
+              if (pr.head.repo && pr.head.repo.full_name === `${owner}/${repo}`) {
+                await github.rest.git.deleteRef({ owner, repo, ref: `heads/${pr.head.ref}` }).catch(() => {});
+              }
+              say('merged');
+            }
+
+            for (const n of await prNumbers()) {
+              try { await gate(n); } catch (e) { core.warning(`#${n}: ${e.message}`); }
+            }

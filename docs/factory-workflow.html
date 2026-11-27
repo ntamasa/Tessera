@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI Factory Workflow</title>
+<style>
+  @page { size: A4; margin: 14mm 15mm 16mm 15mm; }
+  :root {
+    --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb; --soft:#f6f7f9;
+    --accent:#4f46e5; --red:#e11d48; --green:#059669; --amber:#d97706;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:#fff; color:var(--ink);
+    font-family:"Segoe UI", Inter, Arial, sans-serif; font-size:9.6pt; line-height:1.42; }
+  h1 { font-size:24pt; margin:0 0 2mm; letter-spacing:-.5px; }
+  h2 { font-size:13.5pt; margin:0 0 3mm; padding-bottom:1.5mm; border-bottom:1.5px solid var(--ink); }
+  h3 { font-size:10.5pt; margin:4.5mm 0 1.5mm; }
+  p { margin:0 0 2.2mm; }
+  .sub { color:var(--muted); font-size:11pt; margin-bottom:6mm; }
+  .page { break-before:page; }
+  .lead { font-size:10.4pt; }
+  code { white-space:nowrap; }
+  table.cmd code { white-space:normal; }
+  table.tight td { padding:1.05mm 2mm 1.05mm 0; }
+  table.triggers td { padding:.8mm 2mm .8mm 0; }
+  code, .mono { font-family:Consolas, "Cascadia Mono", monospace; font-size:8.6pt; background:#f1f3f6; padding:0 3px; border-radius:3px; }
+  table { width:100%; border-collapse:collapse; margin:1mm 0 3mm; font-size:8.8pt; }
+  th { text-align:left; font-weight:600; color:var(--muted); font-size:7.8pt; text-transform:uppercase; letter-spacing:.5px;
+       border-bottom:1.2px solid var(--ink); padding:1.4mm 2mm 1.2mm 0; }
+  td { border-bottom:1px solid var(--line); padding:1.4mm 2mm 1.4mm 0; vertical-align:top; }
+  tr { break-inside:avoid; }
+  td:first-child { font-weight:600; }
+  td.n { font-weight:400; }
+  ol, ul { margin:0 0 2.5mm; padding-left:5mm; }
+  li { margin-bottom:1mm; }
+  .principles li b { display:inline; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:6mm; }
+  .box { background:var(--soft); border-radius:6px; padding:3mm 4mm; margin:2mm 0 3mm; }
+  .legend { display:flex; flex-wrap:wrap; gap:4mm 6mm; font-size:8.3pt; color:var(--muted); margin:1.5mm 0 3mm; }
+  .legend span { display:inline-flex; align-items:center; gap:1.6mm; }
+  .sw { width:12px; height:9px; border-radius:2px; border:1.3px solid; display:inline-block; }
+  .ln { width:20px; height:0; border-top:1.6px solid; display:inline-block; }
+  .tag { display:inline-block; font-size:7.4pt; font-weight:700; padding:0 4px; border-radius:6px; color:#fff; background:var(--amber); }
+  svg { width:100%; height:auto; display:block; font-family:"Segoe UI", Inter, Arial, sans-serif; }
+  svg text { fill:var(--ink); }
+  svg .t  { font-size:11px; font-weight:600; }
+  svg .s  { font-size:8.6px; fill:#6b7280; }
+  svg .lb { font-size:8.6px; fill:#374151; paint-order:stroke; stroke:#fff; stroke-width:3px; stroke-linejoin:round; }
+  svg .lr { fill:#be123c; }
+  svg .lg { fill:#047857; }
+  svg .ltr { font-size:9.6px; font-weight:700; }
+  svg .band { font-size:9px; font-weight:700; letter-spacing:1.6px; fill:#9ca3af; }
+  svg .hd { font-size:9.6px; font-weight:600; }
+  .cap { color:var(--muted); font-size:8.4pt; margin-top:1mm; }
+  .k { white-space:nowrap; }
+</style>
+</head>
+<body>
+
+<!-- ============ PAGE 1 ============ -->
+<h1>The AI Factory</h1>
+<div class="sub">How a one-sentence request becomes reviewed, tested, merged code. Onboarding guide.</div>
+
+<p class="lead">The factory is a set of Claude Code <b>skills</b> and <b>subagents</b> in <code>~/.claude</code>. You type <code>/factory</code> and describe what you need in one sentence. Skills question ("grill") you until every decision is made, then write the intent, design, spec and Jira tickets. The spec and tickets are written by agents on <b>Opus 5.5 at extra-high effort</b>, which ask you through your session. Cheap agents build every story test-first, in parallel. Five reviewer agents check every pull request. A GitHub Action, the <b>merge gate</b>, merges once all of them pass. When something is unclear, it goes back to the planning step that owns it. Nobody guesses.</p>
+
+<h3>Five principles</h3>
+<ol class="principles">
+  <li><b>AI never decides.</b> Every product or technical decision (names, limits, messages, data shapes, libraries) goes to you as a question with a recommended answer. An agent that can't ask stops and files a blocker.</li>
+  <li><b>Each step has one source of truth.</b> intent → spec → tickets. The spec is self-contained and replaces the intent. Later steps never read earlier artifacts: a gap goes back to the step that owns it.</li>
+  <li><b>Test-first, with literal values.</b> Requirements are Given / when / then with exact values. Tests copy those values. Each test slice is a red commit, then a green commit.</li>
+  <li><b>Loops, not guesses.</b> Implementation blockers go to <code>spec-triage</code>, review findings to <code>review-triage</code>. Each loop runs at most 5 times, then a human takes over.</li>
+  <li><b>Machines merge, people approve.</b> No agent merges. The merge gate merges only when every reviewer passed the <i>same</i> commit and CI is green. Risky PRs also need your <code>human-approved</code> label.</li>
+</ol>
+
+<h3>The four phases</h3>
+<table>
+  <tr><th style="width:15%">Phase</th><th style="width:28%">Runs</th><th style="width:31%">Produces</th><th>Your part</th></tr>
+  <tr><td>Plan</td><td class="n"><code>factory</code> runs <code>intent</code> → <code>to-design</code> (if UI) → <code>to-spec</code> → <code>to-tickets</code>. Spec and tickets: <b>spec-writer</b> / <b>ticket-writer</b> agents (Opus 5.5, xhigh)</td><td class="n">intent.md, design files, spec.md, business rules, Jira epic / stories / subtasks</td><td class="n">Answer the questions. Accept the prototype.</td></tr>
+  <tr><td>Build</td><td class="n"><code>to-implement</code> + one <b>implementer</b> agent per story</td><td class="n">One branch per story, built test-first: a red test commit, then a green code commit per slice</td><td class="n">Answer the open question when a blocker needs a spec change.</td></tr>
+  <tr><td>Review</td><td class="n"><code>to-pr</code>, <code>to-review</code> + 4–5 <b>reviewer</b> agents</td><td class="n">PRs, each reviewer's verdict as a PR comment</td><td class="n">Answer spec or design questions a finding raises. Review risky (H1–H4) PRs.</td></tr>
+  <tr><td>Merge</td><td class="n">Merge gate (GitHub Action), <code>planning-cleanup</code></td><td class="n">Stories merged into the epic branch, then the epic merged into <code>develop</code>. Jira set to Done.</td><td class="n">Add <code>human-approved</code> when asked. Finish stopped PRs.</td></tr>
+</table>
+
+<div class="box">
+<b>Start a feature:</b> <code>/factory "Users can mark a brew as favorite"</code>. It runs the plan phase without stopping between steps, then starts the build, which runs on by itself through PRs, reviews and merges. <b>Resume at any time:</b> <code>/factory</code> without arguments shows where every feature stands and continues the one you pick (<code>/factory status</code> only shows it). <b>Quiet:</b> a <code>/factory</code> run shows only its questions and one line per step (the files hold the details), and installs missing tools itself.<br><b>Step by step instead:</b> every skill still works on its own. <code>/intent "…"</code> ends by asking <i>Start / Later</i> for the next step, and so does each skill after it.
+</div>
+
+<!-- ============ PAGE 2 ============ -->
+<div class="page">
+<h2>1 · The factory loop</h2>
+<svg id="loop"></svg>
+<div class="legend">
+  <span><i class="sw" style="border-color:#475569;background:#fff"></i>skill (runs in your session)</span>
+  <span><i class="sw" style="border-color:#6366f1;background:#eef2ff"></i>subagent (isolated worktree)</span>
+  <span><i class="sw" style="border-color:#e11d48;background:#fff1f2"></i>triage (routes problems back)</span>
+  <span><i class="sw" style="border-color:#059669;background:#ecfdf5"></i>GitHub merge gate</span>
+  <span><span class="tag">you</span> you decide or accept here</span>
+  <span><span class="tag" style="background:#fff;color:#b45309;border:1px dashed #d97706">you?</span> only sometimes: the gate waits for your <code>human-approved</code> label only on PRs that need human review</span>
+  <span><i class="ln" style="border-color:#475569;border-top-style:dashed"></i>report back</span>
+  <span><i class="ln" style="border-color:#e11d48;border-top-style:dashed"></i>loop back (letter = triage class)</span>
+</div>
+<h3>How to read it</h3>
+<ul>
+  <li><b>Happy path:</b> intent → design → spec → tickets → implement → PR → review → gate merges into the epic branch. When every story of the epic is merged, the epic goes through one final PR into <code>develop</code>. <code>/factory</code> runs the plan row without stopping; run by hand, each skill asks <i>Start / Later</i> for the next one.</li>
+  <li><b>Build:</b> <code>to-implement</code> starts one implementer per ready story, all in parallel, each in its own worktree. Each one reports back <b>DONE</b> (pushed, on to <code>to-pr</code>) or <b>BLOCKED</b>.</li>
+  <li><b>Build loop:</b> <code>to-implement</code> hands a <b>BLOCKED</b> report to <code>spec-triage</code>, which classifies it from the evidence: <b>A·B</b> (spec gap or ambiguity) → <code>to-spec</code>, then <code>to-tickets</code>; <b>C</b> (spec clear, the ticket didn't carry it) → <code>to-tickets</code> only. Then the implementer resumes on the same branch.</li>
+  <li><b>Review loop:</b> a blocking finding or a red CI goes to <code>review-triage</code>: <b>D</b> (design wrong) → <code>to-design</code>, <b>S</b> (spec wrong) → <code>to-spec</code>, <b>F</b> (code wrong) → <code>to-tickets</code>. Each ends in <code>to-tickets</code>. <b>X</b> (reviewer wrong) is dismissed; <b>J</b> (judgement call) is fixed or kept, as triage decides. The fix is built as a new <code>Fix:</code> subtask (or <code>Change:</code> story), then <i>every</i> reviewer runs again.</li>
+  <li><b>Merge:</b> reviewers only post verdict comments. The merge gate (a GitHub Action) reads them and merges once all passed on the same head and CI is green, waiting for you only if the PR needs human review. Each merge sends the factory back to <code>to-implement</code> for the stories that were waiting.</li>
+</ul>
+</div>
+
+<!-- ============ PAGE 3 ============ -->
+<div class="page">
+<h2>2 · What triggers what</h2>
+<table class="tight triggers">
+  <tr><th style="width:25%">When…</th><th style="width:51%">…this happens</th><th>Notes</th></tr>
+  <tr><td>You run <code>/factory "…"</code> or <code>/intent "…"</code></td><td class="n">Grilling on the business reason, scope, constraints and success criteria → <code>intent.md</code>. It judges whether the UI changes and goes on to <code>to-design</code> or <code>to-spec</code> (<code>/intent</code> asks Start or Later first). If unsure, it asks you.</td><td class="n">Never changed automatically: if it's wrong later, you run <code>intent-revise</code></td></tr>
+  <tr><td>Intent changes the UI</td><td class="n"><code>to-design</code>: grill → design screens → publish an HTML prototype → you accept → screenshots + <code>design-changes.md</code> → commit on <code>plan/&lt;feature&gt;</code>.</td><td class="n">No design files yet → <code>design-baseline</code> documents the current UI first</td></tr>
+  <tr><td>Design accepted, or no UI</td><td class="n"><code>to-spec</code> relays for its <b>spec-writer</b> agent (Opus 5.5, xhigh): it reads the codebase, grills business gaps and technical decisions → <code>spec.md</code> (B#, R#, technical design) + <code>docs/business-rules.md</code> → commit. A decision that changes the UI <b>pauses</b> it: <code>to-design</code> runs to the end (you accept, it commits), then the spec continues.</td><td class="n">Never runs alongside <code>to-design</code></td></tr>
+  <tr><td>Spec written</td><td class="n"><code>to-tickets</code> checks Jira; its <b>ticket-writer</b> agent (Opus 5.5, xhigh) writes epic, stories (max 3 points), subtasks → Jira. Renames <code>plan/</code> to <code>epic/&lt;KEY&gt;-…</code> (or <code>bug/…</code>) and pushes it.</td><td class="n">Gap in the spec → offers <code>to-spec</code> with the change request</td></tr>
+  <tr><td>Tickets published</td><td class="n"><code>to-implement</code>: one Haiku <b>implementer</b> per <i>ready</i> story, all in parallel, each in its own worktree. Story → In Progress.</td><td class="n">Ready = every blocking story is Done</td></tr>
+  <tr><td>Implementer reports <b>DONE</b></td><td class="n">Subtasks → Done, branch pushed, story → In Review → <code>to-pr</code> opens the story PR → <code>to-review</code>.</td><td class="n">Bug: final PR straight to <code>develop</code></td></tr>
+  <tr><td>Implementer reports <b>BLOCKED</b></td><td class="n">Loop count +1 (Jira label <code>factory-loops-n</code>) → <code>spec-triage</code> → A/B: <code>to-spec</code> revise → <code>to-tickets</code> update; C: <code>to-tickets</code> only → implementer resumes.</td><td class="n">&gt; 5 loops on a subtask → <code>factory-stopped</code></td></tr>
+  <tr><td>PR opened</td><td class="n"><code>to-review</code> starts the reviewers in the PR's marker in parallel (only one ui-ux at a time). Each posts its verdict comment tied to the head SHA.</td><td class="n">Always code, spec, tests, security; + ui-ux if UI changed</td></tr>
+  <tr><td>Any finding or CI failure</td><td class="n">PR loop +1 → <code>review-triage</code> (F / S / D / X / J) → design / spec / tickets → <code>to-implement</code> builds the fix → all reviewers again.</td><td class="n">&gt; 5 loops → <code>factory-stopped</code></td></tr>
+  <tr><td>All findings X or J</td><td class="n">Reason replied in the finding's thread, resolved. Those reviewers re-run: accept or dispute.</td><td class="n">One dispute; the second decision is final</td></tr>
+  <tr><td>You comment on a PR</td><td class="n"><code>/factory</code> triages each: fixed + resolved, or answered.</td><td class="n">No loop count</td></tr>
+  <tr><td>Diff matches H1–H4</td><td class="n"><code>needs-human-review</code> label. The gate waits until you review and add <code>human-approved</code>.</td><td class="n">Never on a feature's final PR</td></tr>
+  <tr><td>All reviewers PASS on the same head</td><td class="n">Merge gate merges (CI green, up to date, no conflict, approved if needed) → story → Done.</td><td class="n">Gate runs on comments, PR events, every 30 min</td></tr>
+  <tr><td>Last story of the epic merged</td><td class="n"><code>to-pr --final &lt;EPIC&gt;</code>: final PR <code>epic/…</code> → <code>develop</code> → full review of the whole epic.</td><td class="n">No open story PRs allowed</td></tr>
+  <tr><td>Final PR: all reviewers PASS</td><td class="n"><code>planning-cleanup</code> pushes the cleanup commit (only deletes planning files) → gate merges into <code>develop</code> → epic → Done.</td><td class="n">Cleanup keeps the passes valid</td></tr>
+  <tr><td>Target branch moved on</td><td class="n">Gate merges the target into the PR and waits for CI again. Reviewer passes stay valid.</td><td class="n">"Update + CI only"</td></tr>
+  <tr><td>Any other new commit on a PR</td><td class="n">Every pass becomes invalid, <code>human-approved</code> is removed, every reviewer runs again.</td><td class="n"></td></tr>
+  <tr><td>Something merged in a review run</td><td class="n"><code>to-review</code> → <code>to-implement</code>: waiting stories start.</td><td class="n">The factory keeps moving</td></tr>
+  <tr><td>Merge conflict / CI infra failure</td><td class="n">Reported for a human. The gate never resolves conflicts.</td><td class="n"></td></tr>
+</table>
+</div>
+
+<!-- ============ PAGE 4 ============ -->
+<div class="page">
+<h2>3 · One story, end to end (sequence)</h2>
+<svg id="seq"></svg>
+<p class="cap">Solid arrow = call / action. Dashed arrow = report or answer. Shaded frames are the two loops. Each one runs at most 5 times before the item gets <code>factory-stopped</code>.</p>
+</div>
+
+<!-- ============ PAGE 5 ============ -->
+<div class="page">
+<h2>4 · Branches and pull requests</h2>
+<p>One feature = one <b>container branch</b>. It holds the planning files first, then the merged stories. The main checkout stays on it while the feature is in the factory.</p>
+<svg id="git"></svg>
+<div class="legend">
+  <span><i class="sw" style="border-color:#94a3b8;background:#94a3b8;border-radius:50%"></i>planning commit</span>
+  <span><i class="sw" style="border-color:#e11d48;background:#e11d48;border-radius:50%"></i>red commit (test only)</span>
+  <span><i class="sw" style="border-color:#059669;background:#059669;border-radius:50%"></i>green commit (code)</span>
+  <span><i class="sw" style="border-color:#1f2937;background:#fff;border-radius:50%"></i>merge by the gate</span>
+</div>
+<table>
+  <tr><th style="width:20%">Branch</th><th style="width:28%">Made by</th><th>Holds</th><th style="width:12%">Pushed</th></tr>
+  <tr><td><code>plan/&lt;feature&gt;</code></td><td class="n">first planning skill that commits, from <code>origin/develop</code></td><td class="n">intent, design, spec, ticket drafts</td><td class="n">never</td></tr>
+  <tr><td><code>epic/&lt;KEY&gt;-slug</code></td><td class="n"><code>to-tickets</code>, by renaming <code>plan/</code></td><td class="n">planning files, then the merged stories</td><td class="n">yes</td></tr>
+  <tr><td><code>feature/&lt;KEY&gt;-slug</code></td><td class="n">implementer, from the epic branch</td><td class="n">one story's commits</td><td class="n">yes</td></tr>
+  <tr><td><code>bug/&lt;KEY&gt;-slug</code></td><td class="n"><code>to-tickets</code>, by renaming <code>plan/</code> (bug spec)</td><td class="n">planning files + the bug fix (the implementer works on it directly)</td><td class="n">yes</td></tr>
+</table>
+<table>
+  <tr><th style="width:20%">PR</th><th style="width:24%">From → into</th><th>Reviewers</th><th style="width:14%">Human rules</th><th style="width:10%">Cleanup</th></tr>
+  <tr><td>Story PR</td><td class="n"><code>feature/…</code> → <code>epic/…</code></td><td class="n">code, spec, tests, security (+ ui-ux)</td><td class="n">yes</td><td class="n">no</td></tr>
+  <tr><td>Final PR, feature</td><td class="n"><code>epic/…</code> → <code>develop</code></td><td class="n">all again, on the whole epic</td><td class="n">no</td><td class="n">yes</td></tr>
+  <tr><td>Final PR, bug</td><td class="n"><code>bug/…</code> → <code>develop</code></td><td class="n">code, spec, tests, security (+ ui-ux)</td><td class="n">yes</td><td class="n">yes</td></tr>
+</table>
+<div class="grid2">
+<div>
+<h3>The merge gate merges when…</h3>
+<ul>
+  <li>the PR has the <code>factory</code> label and not <code>factory-stopped</code></li>
+  <li>every reviewer in <code>&lt;!-- factory-reviewers --&gt;</code> has a <code>verdict=pass</code> comment for the <b>current head</b></li>
+  <li>no <code>needs-human-review</code>, or it also has <code>human-approved</code></li>
+  <li>a final PR contains the cleanup commit</li>
+  <li>it's up to date with its target, CI is green and there's no conflict</li>
+</ul>
+</div>
+<div>
+<h3>A pass stays valid only if…</h3>
+<p>every commit after the reviewed head is either a <b>merge of the target branch</b> (the gate keeps PRs up to date) or the <b>cleanup commit</b>. Any other commit means all reviewers again and removes <code>human-approved</code>.</p>
+<p>The gate runs on PR comments, PR events and a 30-minute sweep. It uses the <code>FACTORY_GATE_TOKEN</code> secret so its merges trigger CI.</p>
+</div>
+</div>
+</div>
+
+<!-- ============ PAGE 6 ============ -->
+<div class="page">
+<h2>5 · Artifacts</h2>
+<table class="triggers">
+  <tr><th style="width:21%">File</th><th>What it is</th><th style="width:17%">Written by</th><th style="width:11%">Lifetime</th></tr>
+  <tr><td><code>intent.md</code></td><td class="n">What and why: objective, constraints (in / out of scope), checkable success criteria. Never how.</td><td class="n"><code>intent</code>, <code>intent-revise</code></td><td class="n">temporary</td></tr>
+  <tr><td><code>design-brief.md</code></td><td class="n">Optional: your initial design idea (style, mood, references). The intent wins on <i>what</i>, the brief on <i>looks</i>.</td><td class="n">you</td><td class="n">temporary</td></tr>
+  <tr><td><code>design/</code></td><td class="n"><code>DESIGN.md</code> (Google Stitch tokens + components), <code>screens/*.md</code> specs, <code>prototype/</code> HTML with <code>?state=</code>, <code>tokens.css</code>, <code>screenshots/</code></td><td class="n"><code>to-design</code>, <code>design-baseline</code></td><td class="n">living</td></tr>
+  <tr><td><code>design-changes.md</code></td><td class="n">What this feature changed in the design, in words, from the feature's <code>base_commit</code></td><td class="n"><code>to-design</code></td><td class="n">temporary</td></tr>
+  <tr><td><code>*_deprecated.png</code></td><td class="n">"Before" screenshots of changed screens, attached to stories</td><td class="n"><code>to-design</code></td><td class="n">temporary</td></tr>
+  <tr><td><code>spec.md</code></td><td class="n">Self-contained build plan: Objective, Constraints, business rules <b>B#</b>, requirements <b>R#</b> (Given / when / then, literal values, failure cases), Bug section, Technical design (exact files, signatures, seams and mocks), Out of scope. IDs are stable.</td><td class="n"><code>to-spec</code></td><td class="n">temporary</td></tr>
+  <tr><td><code>docs/business-rules.md</code></td><td class="n">Every business rule of the product, current state only, grouped by area</td><td class="n"><code>to-spec</code></td><td class="n">living</td></tr>
+  <tr><td><code>tickets.json</code>, <code>tickets/</code></td><td class="n">Publish manifest + drafts. Spec sections are pulled in by heading, never copied.</td><td class="n"><code>to-tickets</code></td><td class="n">temporary</td></tr>
+</table>
+<p class="cap">Temporary files exist only on the container branch. The cleanup commit on the final PR deletes them. Living files and code stay in <code>develop</code>.</p>
+
+<h3>Jira structure</h3>
+<div class="grid2">
+<div>
+<ul>
+  <li><b>Epic</b>: one per intent. Holds the spec's objective, summary, constraints and technical design.</li>
+  <li><b>Story</b>: one demoable <i>vertical</i> slice (data → API → UI → tests), never one layer. Every requirement is in exactly one story. <b>Max 3 story points</b> (scale 1, 2, 3; 5+ is split).</li>
+  <li><b>Subtask</b>: one step, one seam, one fresh coder session: goal, read first, files, exact names, tests (happy + negative, literal values), out of scope, done when.</li>
+  <li><b>Bug</b>: replaces stories. Subtask 1 writes a failing reproduction test, subtask 2 fixes it without touching that test.</li>
+</ul>
+</div>
+<div>
+<p><b>Statuses:</b> To Do → <b>In Progress</b> (implementer starts) → <b>In Review</b> (DONE, branch pushed) → <b>Done</b> (PR merged). Epic → Done when the final PR merges.</p>
+<p><b>Done is frozen.</b> A Done issue is never edited. A change to Done work becomes a <b>new</b> issue that goes through the whole loop:</p>
+<ul>
+  <li>Done subtask → new <code>Change: …</code> / <code>Fix: …</code> subtask under its story</li>
+  <li>Done story → new <code>Change: …</code> story under the epic, blocked by the Done one</li>
+</ul>
+<p>Jira only through <code>jira.mjs</code> (never MCP), config from <code>.env</code>.</p>
+</div>
+</div>
+<h3>Triage classes (the triage decides; unsure → the class that goes back further)</h3>
+<div class="grid2">
+<table>
+  <tr><th colspan="2">spec-triage: implementer blockers</th></tr>
+  <tr><td style="width:12%">A</td><td class="n">Spec gap or conflict → <code>to-spec</code> → <code>to-tickets</code></td></tr>
+  <tr><td>B</td><td class="n">Ambiguous spec → <code>to-spec</code> → <code>to-tickets</code></td></tr>
+  <tr><td>C</td><td class="n">Clear spec, ticket missed it → <code>to-tickets</code></td></tr>
+</table>
+<table>
+  <tr><th colspan="2">review-triage: findings</th></tr>
+  <tr><td style="width:12%">F</td><td class="n">Code wrong → new <code>Fix:</code> subtask</td></tr>
+  <tr><td>S</td><td class="n">Spec wrong or silent → <code>to-spec</code> → <code>to-tickets</code></td></tr>
+  <tr><td>D</td><td class="n">Design wrong → <code>to-design</code> → spec → tickets</td></tr>
+  <tr><td>X</td><td class="n">Finding wrong (clear evidence) → dismissed</td></tr>
+  <tr><td>J</td><td class="n">Judgement call → fixed or kept, triage decides</td></tr>
+</table>
+</div>
+</div>
+
+<!-- ============ PAGE 7 ============ -->
+<div class="page">
+<h2>6 · Agents and guardrails</h2>
+<table>
+  <tr><th style="width:20%">Agent</th><th style="width:11%">Model</th><th>Job</th></tr>
+  <tr><td>spec-writer</td><td class="n">Opus 5.5 xhigh</td><td class="n">Writes or revises the spec and business rules for <code>to-spec</code>, grilling you through the relay.</td></tr>
+  <tr><td>ticket-writer</td><td class="n">Opus 5.5 xhigh</td><td class="n">Breaks the spec into epic, stories and subtasks and publishes them for <code>to-tickets</code>.</td></tr>
+  <tr><td>installer</td><td class="n">Haiku 5.5</td><td class="n">Installs or upgrades a tool a step needs (Node.js, Playwright, <code>designmd</code>…) and answers in one line, so installs stay out of your session.</td></tr>
+  <tr><td>implementer</td><td class="n">Haiku 5.5</td><td class="n">Builds the subtasks of one story with the <code>tdd</code> skill: red test commit, green code commit, whole suite green. Checks every subtask before coding and reports all open questions at once.</td></tr>
+  <tr><td>reviewer-code</td><td class="n">Sonnet 5.5</td><td class="n">Documented standards, fit with the spec's technical design, error handling. Fowler code smells as judgement findings.</td></tr>
+  <tr><td>reviewer-spec</td><td class="n">Sonnet 5.5</td><td class="n">Does the code do what the requirements and business rules say? Checks for missing, wrong and scope-creep behavior.</td></tr>
+  <tr><td>reviewer-tests</td><td class="n">Sonnet 5.5</td><td class="n">Every requirement proven with literal values, negative cases, right seams and mocks, no weakened tests. Runs the suite and checks red before green.</td></tr>
+  <tr><td>reviewer-security</td><td class="n">Opus 5.5</td><td class="n">Injection, XSS, authz / IDOR, data exposure, input limits, secrets, web settings, dependencies. Always escalates security features (H2).</td></tr>
+  <tr><td>reviewer-ui-ux</td><td class="n">Sonnet 5.5</td><td class="n">Runs the app with Playwright and compares every state with the design files. Checks flows, feedback and accessibility. Marks problems the design itself causes "(design)".</td></tr>
+</table>
+<p class="cap"><b>The relay:</b> agents can't ask you anything themselves. The spec and ticket agents end every message with a <code>relay</code> block; <code>to-spec</code> / <code>to-tickets</code> ask you exactly those questions and send your answers back to the same agent, word for word (<code>references/relay.md</code>). They are agents because a skill's <code>model</code> setting is ignored when another skill calls it, and they work in your main checkout. The implementer and reviewers each run in their own git worktree. Reviewers are report-only: every finding blocks. A <b>rule</b> finding breaks a requirement, test proof, data safety, the design or a documented standard; a <b>judgement</b> finding (max 5) breaks nothing written but is worth changing. No nits. No evidence (<code>path:line</code> + quoted source), no finding.</p>
+
+<div class="grid2">
+<div>
+<h3>Hard guardrails (agent-guard hook)</h3>
+<ul>
+  <li>No agent merges, approves, edits, closes or labels a PR. Only reviewers may comment.</li>
+  <li>Agents only <i>read</i> Jira. The orchestrators update it.</li>
+  <li><b>Red-test lock:</b> while HEAD is a red commit (marked with a git note in <code>refs/notes/factory-red</code>), its files can't be edited, and the commit can't be amended or soft-reset. You make the test pass by changing code, never the test.</li>
+</ul>
+<h3>Loop caps</h3>
+<ul>
+  <li>&gt; 5 blocked reports on one subtask, or &gt; 5 review loops on one PR → <code>factory-stopped</code>. The gate never merges it, and a human finishes it. To retry a stopped Jira item, remove the label.</li>
+</ul>
+</div>
+<div>
+<h3>Human review rules</h3>
+<table>
+  <tr><td style="width:12%">H1</td><td class="n"><b>Irreversible:</b> destructive migrations, permanent deletes, outbound email / SMS / payment / webhooks</td></tr>
+  <tr><td>H2</td><td class="n"><b>Security feature:</b> auth, roles, sessions, tokens, crypto, secrets, CORS / CSP, rate limits</td></tr>
+  <tr><td>H3</td><td class="n"><b>Infra / CI / factory config:</b> <code>.github/</code>, Docker, deploy, <code>.claude/</code>, CLAUDE.md, <code>.env.example</code></td></tr>
+  <tr><td>H4</td><td class="n"><b>Contract or data:</b> breaking API change, money / billing, personal data</td></tr>
+</table>
+<p class="cap">When unsure, the rule applies. GitHub won't let you approve your own PR, so your approval is the <code>human-approved</code> label.</p>
+</div>
+</div>
+
+</div>
+
+<!-- ============ PAGE 8 ============ -->
+<div class="page">
+<h2>7 · Setup, your role, cheat sheet</h2>
+<div class="grid2">
+<div>
+<h3>One-time project setup</h3>
+<ul>
+  <li><b>Jira:</b> <code>/jira-setup</code> → <code>.env</code> with <code>JIRA_BASE_URL</code>, <code>JIRA_EMAIL</code>, <code>JIRA_API_TOKEN</code> (you paste it), <code>JIRA_PROJECT_KEY</code>. <code>.env</code> is git-ignored, and <code>.env.example</code> lists the variables.</li>
+  <li><b>GitHub:</b> <code>/github-setup</code> → gh login, remote, a <code>develop</code> branch, labels, Actions on, the <code>FACTORY_GATE_TOKEN</code> secret (a fine-grained PAT with Contents + Pull requests read/write), a CI workflow on <code>pull_request</code>, and the merge gate workflow on the default branch <i>and</i> <code>develop</code> (you merge those PRs yourself).</li>
+  <li><b>Repo:</b> <code>.gitignore</code> ignores <code>.claude/worktrees/</code>, and <code>.worktreeinclude</code> lists <code>.env</code>.</li>
+  <li><b>Everything at once:</b> <code>/setup-factory</code> checks the machine and the project, installs what it can without asking (through the <b>installer</b> agent: Playwright + Chromium, <code>designmd</code>, the ui-ux-pro-max plugin; plus the repo files), runs <code>jira-setup</code> and <code>github-setup</code>, and lists the steps only you can do. <code>/setup-factory check</code> only reports.</li>
+  <li><b>Existing UI, no design files:</b> <code>/design-baseline</code> documents it as it is.</li>
+</ul>
+<h3>Your role (the human)</h3>
+<ul>
+  <li>Answer grilling questions. Every one comes with a recommendation.</li>
+  <li>Accept or change the prototype. The spec is accepted by default: ask for changes when you want them.</li>
+  <li>Review <code>needs-human-review</code> PRs and add <code>human-approved</code>, or comment what to change and run <code>/factory</code>.</li>
+  <li>Finish <code>factory-stopped</code> items and merge conflicts.</li>
+  <li>Close Jira tickets the factory lists as no longer needed. It never deletes issues.</li>
+</ul>
+</div>
+<div>
+<h3>Commands</h3>
+<table class="cmd">
+  <tr><td style="width:44%"><code>/factory "…"</code></td><td class="n">start a feature or bug, run it all</td></tr>
+  <tr><td><code>/factory [path | key | status]</code></td><td class="n">where things stand, continue one</td></tr>
+  <tr><td><code>/setup-factory [check]</code></td><td class="n">set up or check the factory</td></tr>
+  <tr><td><code>/intent "…"</code></td><td class="n">start step by step</td></tr>
+  <tr><td><code>/intent-revise &lt;path&gt; "…"</code></td><td class="n">change an intent</td></tr>
+  <tr><td><code>/to-design [intent]</code></td><td class="n">design the UI</td></tr>
+  <tr><td><code>/to-spec [intent] ["change"]</code></td><td class="n">write or revise the spec</td></tr>
+  <tr><td><code>/to-tickets [spec]</code></td><td class="n">publish or update tickets</td></tr>
+  <tr><td><code>/to-implement [keys]</code></td><td class="n">build ready stories (no args: everything open)</td></tr>
+  <tr><td><code>/to-pr [keys | --final EPIC]</code></td><td class="n">open PRs</td></tr>
+  <tr><td><code>/to-review [PRs]</code></td><td class="n">review open factory PRs</td></tr>
+  <tr><td><code>/planning-cleanup &lt;PR&gt;</code></td><td class="n">finish a final PR by hand</td></tr>
+</table>
+<h3>Labels</h3>
+<table>
+  <tr><td style="width:44%"><code>factory</code></td><td class="n">opened by the factory, the gate watches it</td></tr>
+  <tr><td><code>needs-human-review</code></td><td class="n">matched H1–H4</td></tr>
+  <tr><td><code>human-approved</code></td><td class="n">you reviewed it (removed on every new push)</td></tr>
+  <tr><td><code>factory-loops-n</code></td><td class="n">loop count (PR, or a Jira subtask)</td></tr>
+  <tr><td><code>factory-stopped</code></td><td class="n">loop cap hit, a human finishes it</td></tr>
+</table>
+<h3>Known limits</h3>
+<ul>
+  <li>Parallel agents share one <code>.env</code>: the same database and ports. Tests that need exclusive resources can collide.</li>
+  <li>The gate never resolves merge conflicts.</li>
+</ul>
+</div>
+</div>
+</div>
+
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+function mk(p, tag, a = {}, txt) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in a) e.setAttribute(k, a[k]);
+  if (txt != null) e.textContent = txt;
+  p.appendChild(e); return e;
+}
+const COL = { dark:'#475569', red:'#e11d48', green:'#059669', gray:'#94a3b8' };
+function setup(id, w, h) {
+  const s = document.getElementById(id);
+  s.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  const d = mk(s, 'defs');
+  for (const [n, c] of Object.entries(COL)) {
+    const m = mk(d, 'marker', { id:`${id}-${n}`, viewBox:'0 0 10 10', refX:'9', refY:'5', markerWidth:'7', markerHeight:'7', orient:'auto-start-reverse' });
+    mk(m, 'path', { d:'M0,1 L9,5 L0,9 z', fill:c });
+  }
+  s._id = id; return s;
+}
+const KIND = {
+  skill:  { fill:'#ffffff', stroke:'#475569' },
+  agent:  { fill:'#eef2ff', stroke:'#6366f1' },
+  triage: { fill:'#fff1f2', stroke:'#e11d48' },
+  gate:   { fill:'#ecfdf5', stroke:'#059669' },
+  branch: { fill:'#f1f5f9', stroke:'#94a3b8' },
+  you:    { fill:'#fffbeb', stroke:'#d97706' },
+};
+function box(s, cx, cy, w, h, kind, title, sub, o = {}) {
+  const k = KIND[kind];
+  mk(s, 'rect', { x:cx-w/2, y:cy-h/2, width:w, height:h, rx:6, fill:k.fill, stroke:k.stroke, 'stroke-width':1.3, ...(o.dashed ? {'stroke-dasharray':'4 3'} : {}) });
+  if (sub) {
+    mk(s, 'text', { x:cx, y:cy-2, 'text-anchor':'middle', class:'t' }, title);
+    mk(s, 'text', { x:cx, y:cy+10, 'text-anchor':'middle', class:'s' }, sub);
+  } else mk(s, 'text', { x:cx, y:cy+4, 'text-anchor':'middle', class:'t' }, title);
+  if (o.you) you(s, cx + w/2 - 4, cy - h/2, o.you === '?');
+}
+function you(s, x, y, optional) {
+  if (optional) {
+    mk(s, 'rect', { x:x-15, y:y-6, width:30, height:12, rx:6, fill:'#fff', stroke:'#d97706', 'stroke-width':1.2, 'stroke-dasharray':'2.5 1.5' });
+    mk(s, 'text', { x:x, y:y+3, 'text-anchor':'middle', style:'font-size:7.5px;font-weight:700;fill:#b45309' }, 'you?');
+    return;
+  }
+  mk(s, 'rect', { x:x-12, y:y-6, width:24, height:12, rx:6, fill:'#d97706' });
+  mk(s, 'text', { x:x, y:y+3, 'text-anchor':'middle', style:'font-size:7.5px;font-weight:700;fill:#fff' }, 'you');
+}
+function path(s, pts, col = 'dark', o = {}) {
+  const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0] + ',' + p[1]).join(' ');
+  if (o.halo) mk(s, 'path', { d, fill:'none', stroke:'#f4f6f9', 'stroke-width':6 });
+  mk(s, 'path', { d, fill:'none', stroke:COL[col], 'stroke-width':o.w || 1.4,
+    ...(o.dash ? {'stroke-dasharray':'5 3'} : {}), ...(o.noHead ? {} : {'marker-end':`url(#${s._id}-${col})`}) });
+}
+function label(s, x, y, t, o = {}) {
+  mk(s, 'text', { x, y, 'text-anchor':o.anchor || 'middle', class:'lb ' + (o.cls || '') }, t);
+}
+
+/* ---------------- Diagram 1: the loop ---------------- */
+(function () {
+  const s = setup('loop', 680, 512);
+  const c = [0, 130, 270, 410, 560], r = [0, 58, 214, 330, 446], W = 116, H = 40;
+  [['PLAN', 8, 150], ['BUILD', 164, 108], ['REVIEW', 280, 108], ['MERGE', 396, 112]].forEach(([n, y, h], i) => {
+    mk(s, 'rect', { x:0, y, width:680, height:h, rx:8, fill: i % 2 ? '#fafafa' : '#f4f6f9' });
+    mk(s, 'text', { x:12, y:r[i + 1] + 4, class:'band' }, n);
+  });
+  const L = (i) => c[i] - W/2, R = (i) => c[i] + W/2, T = (j) => r[j] - H/2, B = (j) => r[j] + H/2;
+  // a stack of cards = several agents in parallel
+  const stack = (cx, cy, kind) => [8, 4].forEach((d) => mk(s, 'rect', { x:cx-W/2-d, y:cy-H/2-d, width:W, height:H, rx:6, fill:KIND[kind].fill, stroke:KIND[kind].stroke, 'stroke-width':1 }));
+
+  // boxes
+  box(s, c[1], r[1], W, H, 'skill', 'intent', 'intent.md', { you:1 });
+  box(s, c[2], r[1], W, H, 'skill', 'to-design', 'only if UI changes', { dashed:1, you:1 });
+  box(s, c[3], r[1], W, H, 'skill', 'to-spec', 'spec-writer · Opus', { you:1 });
+  box(s, c[4], r[1], W, H, 'skill', 'to-tickets', 'ticket-writer · Opus', {});
+  mk(s, 'text', { x:12, y:20, style:'font-size:8.6px;font-weight:700;fill:#4f46e5' }, '/factory runs this row');
+  box(s, c[4], r[2], W, H, 'skill', 'to-implement', 'orchestrator');
+  stack(c[3], r[2], 'agent');
+  box(s, c[3], r[2], W, H, 'agent', 'implementer ×N', 'Haiku · worktree · TDD');
+  box(s, c[2], r[2], W, H, 'triage', 'spec-triage', 'class A · B · C');
+  box(s, c[4], r[3], W, H, 'skill', 'to-pr', 'opens the PR');
+  box(s, c[3], r[3], W, H, 'skill', 'to-review', 'orchestrator');
+  stack(c[2], r[3], 'agent');
+  box(s, c[2], r[3], W, H, 'agent', 'reviewers ×4–5', 'code·spec·tests·sec·ui');
+  box(s, c[1], r[3], W, H, 'triage', 'review-triage', 'class F · S · D · X · J');
+  box(s, c[2], r[4], W, H, 'gate', 'merge gate', 'GitHub Action', { you:'?' });
+  box(s, c[3], r[4], W, H, 'branch', 'epic/… branch', 'story PRs land here');
+  box(s, c[4], r[4], W, H, 'branch', 'develop', 'final PR lands here');
+
+  // plan row
+  path(s, [[R(1), r[1]], [L(2), r[1]]]);
+  path(s, [[R(2), r[1]], [L(3), r[1]]]);
+  path(s, [[R(3), r[1]], [L(4), r[1]]]);
+  path(s, [[c[1], T(1)], [c[1], 22], [c[3], 22], [c[3], T(1)]], 'dark', { dash:1 });
+  label(s, c[2], 19, 'no UI → straight to spec');
+  // tickets -> implement
+  path(s, [[c[4], B(1)], [c[4], T(2)]]);
+  label(s, c[4] + 8, 128, 'publish · Start', { anchor:'start' });
+
+  // build: to-implement starts N implementers, each reports back
+  label(s, c[3] - 4, T(2) - 13, 'one per ready story, in parallel');
+  path(s, [[L(4), r[2] - 7], [R(3), r[2] - 7]]);
+  label(s, (R(3) + L(4)) / 2, r[2] - 11, 'start');
+  path(s, [[R(3), r[2] + 7], [L(4), r[2] + 7]], 'dark', { dash:1 });
+  label(s, (R(3) + L(4)) / 2, r[2] + 19, 'report');
+  // to-implement routes each report: DONE -> to-pr, BLOCKED -> spec-triage
+  path(s, [[c[4], B(2)], [c[4], T(3)]]);
+  label(s, c[4] + 8, 286, 'DONE · pushed', { anchor:'start' });
+  path(s, [[c[4] - 30, B(2)], [c[4] - 30, 256], [c[2], 256], [c[2], B(2)]], 'red', { dash:1 });
+  label(s, c[3], 252, 'BLOCKED → spec-triage', { cls:'lr' });
+
+  // review-triage -> D to-design · S to-spec · F to-tickets
+  path(s, [[100, T(3)], [100, 90], [240, 90], [240, B(1)]], 'red', { dash:1 });
+  path(s, [[118, T(3)], [118, 102], [372, 102], [372, B(1)]], 'red', { dash:1 });
+  path(s, [[136, T(3)], [136, 114], [516, 114], [516, B(1)]], 'red', { dash:1 });
+  label(s, 175, 93, 'D', { cls:'lr ltr' });
+  label(s, 320, 105, 'S', { cls:'lr ltr' });
+  label(s, 470, 117, 'F', { cls:'lr ltr' });
+  // spec-triage -> A·B to-spec · C to-tickets (drawn last: bridges over F)
+  path(s, [[250, T(2)], [250, 132], [420, 132], [420, B(1)]], 'red', { dash:1, halo:1 });
+  path(s, [[270, T(2)], [270, 146], [540, 146], [540, B(1)]], 'red', { dash:1, halo:1 });
+  label(s, 340, 135, 'A·B', { cls:'lr ltr' });
+  label(s, 470, 149, 'C', { cls:'lr ltr' });
+
+  // review: to-pr -> to-review starts the reviewers, each reports back
+  path(s, [[L(4), r[3]], [R(3), r[3]]]);
+  label(s, c[2] - 4, T(3) - 13, 'in parallel · each posts its verdict on the PR');
+  path(s, [[L(3), r[3] - 7], [R(2), r[3] - 7]]);
+  path(s, [[R(2), r[3] + 7], [L(3), r[3] + 7]], 'dark', { dash:1 });
+  // reviewers -> review-triage
+  path(s, [[L(2) - 8, r[3]], [R(1), r[3]]], 'red', { dash:1 });
+  label(s, (L(2) + R(1)) / 2 - 4, B(3) + 14, 'blocking / CI red', { cls:'lr' });
+  // verdict comments -> gate
+  path(s, [[c[2], B(3)], [c[2], T(4)]], 'green');
+  label(s, c[2] + 8, 384, 'all PASS on the same head', { anchor:'start', cls:'lg' });
+  label(s, c[2] + 8, 396, '(read from the PR comments)', { anchor:'start', cls:'lg' });
+  // gate -> epic -> develop
+  path(s, [[R(2), r[4]], [L(3), r[4]]], 'green');
+  path(s, [[R(3), r[4]], [L(4), r[4]]], 'green');
+  label(s, (R(3) + L(4)) / 2, T(4) - 5, 'final PR', { cls:'lg' });
+  // epic complete -> to-pr --final
+  path(s, [[c[3] + 30, T(4)], [c[3] + 30, 378], [c[4] - 20, 378], [c[4] - 20, B(3)]], 'dark', { dash:1 });
+  label(s, 490, 372, 'epic complete → --final');
+  // merged -> continue
+  path(s, [[c[2], B(4)], [c[2], 494], [655, 494], [655, r[2]], [R(4), r[2]]], 'dark', { dash:1 });
+  label(s, 470, 491, 'merged → to-implement starts the stories that were waiting');
+})();
+
+/* ---------------- Diagram 2: sequence ---------------- */
+(function () {
+  const P = [
+    ['You', 'you'], ['Planning skills', 'skill'], ['Jira', 'branch'], ['to-implement', 'skill'],
+    ['Implementer', 'agent'], ['to-pr · to-review', 'skill'], ['Reviewers', 'agent'], ['GitHub · gate', 'gate'],
+  ];
+  const X = P.map((_, i) => 42 + i * 85);
+  const H = 800, s = setup('seq', 680, H);
+  const y0 = 54, step = 23;
+
+  // frames first (behind)
+  function frame(y1, y2, t) {
+    mk(s, 'rect', { x:6, y:y1, width:668, height:y2 - y1, rx:6, fill:'#fff5f6', stroke:'#fda4af', 'stroke-width':1 });
+    mk(s, 'rect', { x:6, y:y1, width:t.length * 5.1 + 16, height:14, rx:4, fill:'#e11d48' });
+    mk(s, 'text', { x:14, y:y1 + 10, style:'font-size:8.4px;font-weight:700;fill:#fff' }, t);
+  }
+  const Y = (i) => y0 + 22 + i * step + (i >= 9 ? 12 : 0) + (i >= 14 ? 12 : 0) + (i >= 20 ? 12 : 0) + (i >= 24 ? 12 : 0);
+  frame(Y(9) - 20, Y(13) + 9, 'LOOP · BLOCKED (max 5 per subtask)');
+  frame(Y(20) - 20, Y(23) + 9, 'LOOP · BLOCKING FINDING OR CI RED (max 5 per PR)');
+
+  P.forEach(([n, k], i) => {
+    mk(s, 'line', { x1:X[i], y1:36, x2:X[i], y2:H - 6, stroke:'#cbd5e1', 'stroke-width':1, 'stroke-dasharray':'3 3' });
+    const kd = KIND[k];
+    mk(s, 'rect', { x:X[i] - 39, y:8, width:78, height:28, rx:6, fill:kd.fill, stroke:kd.stroke, 'stroke-width':1.3 });
+    mk(s, 'text', { x:X[i], y:25, 'text-anchor':'middle', class:'hd' }, n);
+  });
+
+  function msg(i, a, b, t, o = {}) {
+    const y = Y(i);
+    if (a === b) {
+      const x = X[a], d = a === P.length - 1 ? -1 : 1;
+      path(s, [[x, y - 6], [x + 22 * d, y - 6], [x + 22 * d, y + 6], [x + 3 * d, y + 6]], o.col || 'dark');
+      label(s, x + 28 * d, y + 3, t, { anchor: d > 0 ? 'start' : 'end', cls:o.cls });
+      return;
+    }
+    const x1 = X[a] + (b > a ? 2 : -2), x2 = X[b] + (b > a ? -3 : 3);
+    path(s, [[x1, y], [x2, y]], o.col || 'dark', { dash:o.dash });
+    label(s, (X[a] + X[b]) / 2, y - 4, t, { cls:o.cls });
+  }
+  msg(0, 0, 1, '/factory "…"');
+  msg(1, 1, 0, 'grilling: intent · design · spec questions', { dash:1 });
+  msg(2, 0, 1, 'answers · accept prototype');
+  msg(3, 1, 2, 'publish epic · stories · subtasks');
+  msg(4, 1, 3, 'Start');
+  msg(5, 3, 2, 'story → In Progress');
+  msg(6, 3, 4, 'start agent ×N (story, branch, base)');
+  msg(7, 4, 2, 'read tickets (read-only)');
+  msg(8, 4, 4, 'per slice: red test commit → green code commit');
+  msg(9, 4, 3, 'REPORT: BLOCKED + all open questions', { dash:1, col:'red', cls:'lr' });
+  msg(10, 3, 1, 'spec-triage → to-spec / to-tickets', { col:'red', cls:'lr' });
+  msg(11, 1, 0, 'A·B: to-spec asks you the open question', { dash:1, col:'red', cls:'lr' });
+  msg(12, 1, 2, 'update tickets (new Change: if Done)', { col:'red', cls:'lr' });
+  msg(13, 3, 4, 'resume (merge container first)', { col:'red', cls:'lr' });
+  msg(14, 4, 3, 'REPORT: DONE', { dash:1 });
+  msg(15, 3, 2, 'subtasks Done · story In Review');
+  msg(16, 3, 5, 'push branch · to-pr <keys>');
+  msg(17, 5, 7, 'open story PR (factory label, reviewers)');
+  msg(18, 5, 6, 'start reviewers in parallel');
+  msg(19, 6, 7, 'PR comment: verdict + head SHA');
+  msg(20, 6, 5, 'REVIEW REPORT', { dash:1, col:'red', cls:'lr' });
+  msg(21, 5, 1, 'review-triage → design / spec / tickets', { col:'red', cls:'lr' });
+  msg(22, 5, 3, 'to-implement: build Fix: subtask', { col:'red', cls:'lr' });
+  msg(23, 5, 6, 're-review all on the new head', { col:'red', cls:'lr' });
+  msg(24, 0, 7, 'only if H1–H4: review + add human-approved', { dash:1 });
+  msg(25, 7, 7, 'all PASS · CI green → merge', { col:'green', cls:'lg' });
+  msg(26, 5, 2, 'story → Done');
+  msg(27, 5, 5, 'epic complete → final PR → review → cleanup');
+  msg(28, 7, 7, 'merge epic into develop', { col:'green', cls:'lg' });
+  msg(29, 5, 3, 'continue: start waiting stories');
+})();
+
+/* ---------------- Diagram 3: git ---------------- */
+(function () {
+  const s = setup('git', 680, 232);
+  const L = { dev:34, epic:96, f1:156, f2:206 };
+  const names = [['develop', L.dev], ['plan/ → epic/BREW-100-…', L.epic], ['feature/BREW-101-…', L.f1], ['feature/BREW-105-…', L.f2]];
+  names.forEach(([n, y]) => mk(s, 'text', { x:0, y:y + 4, style:'font-size:9.6px;font-weight:600;font-family:Consolas,monospace' }, n));
+  const line = (x1, x2, y, col, dash) => mk(s, 'line', { x1, y1:y, x2, y2:y, stroke:col, 'stroke-width':2.2, ...(dash ? {'stroke-dasharray':'4 3'} : {}) });
+  const curve = (x1, y1, x2, y2, col) => mk(s, 'path', { d:`M${x1},${y1} C${x1 + 14},${y1} ${x2 - 14},${y2} ${x2},${y2}`, fill:'none', stroke:col, 'stroke-width':2.2 });
+  const dot = (x, y, fill, stroke = fill, r = 5) => mk(s, 'circle', { cx:x, cy:y, r, fill, stroke, 'stroke-width':1.8 });
+  const t = (x, y, txt, a = 'middle', cls = 'lb') => mk(s, 'text', { x, y, 'text-anchor':a, class:cls }, txt);
+
+  line(150, 672, L.dev, '#1f2937');
+  dot(170, L.dev, '#1f2937');
+  curve(178, L.dev, 210, L.epic, '#94a3b8');
+  line(210, 330, L.epic, '#94a3b8', true);
+  line(330, 618, L.epic, '#6366f1');
+  [[226, 'intent'], [256, 'design'], [286, 'spec'], [316, 'tickets']].forEach(([x, n]) => { dot(x, L.epic, '#94a3b8'); t(x, L.epic - 10, n); });
+  mk(s, 'line', { x1:333, y1:L.epic - 18, x2:333, y2:L.epic + 18, stroke:'#6366f1', 'stroke-width':1.5 });
+  t(338, L.epic - 24, 'to-tickets renames + pushes', 'start');
+  t(258, L.epic + 18, 'local only', 'middle', 'lb');
+
+  curve(350, L.epic, 378, L.f1, '#6366f1');
+  line(378, 456, L.f1, '#6366f1');
+  [[392, 0], [408, 1], [428, 0], [444, 1]].forEach(([x, g]) => dot(x, L.f1, g ? '#059669' : '#e11d48'));
+  t(418, L.f1 + 18, 'S1.1 · S1.2 red → green');
+  curve(456, L.f1, 482, L.epic, '#6366f1');
+  dot(482, L.epic, '#fff', '#1f2937');
+  t(482, L.epic - 10, 'story PR');
+
+  curve(492, L.epic, 516, L.f2, '#6366f1');
+  line(516, 552, L.f2, '#6366f1');
+  dot(526, L.f2, '#e11d48'); dot(542, L.f2, '#059669');
+  t(534, L.f2 + 18, 'starts after BREW-101 is Done');
+  curve(552, L.f2, 574, L.epic, '#6366f1');
+  dot(574, L.epic, '#fff', '#1f2937');
+  t(574, L.epic - 10, 'story PR');
+
+  dot(600, L.epic, '#94a3b8');
+  t(600, L.epic + 18, 'cleanup');
+  curve(612, L.epic, 648, L.dev, '#6366f1');
+  dot(648, L.dev, '#fff', '#1f2937');
+  t(612, L.dev - 10, 'final PR → develop');
+})();
+</script>
+</body>
+</html>
