@@ -61,7 +61,7 @@
 <h1>Tessera</h1>
 <div class="sub">How a one-sentence request becomes reviewed, tested, merged code. Onboarding guide.</div>
 
-<p class="lead">Tessera is a set of Claude Code <b>skills</b> and <b>subagents</b> in <code>~/.claude</code>. You type <code>/factory</code> and describe what you need in one sentence. Skills question ("grill") you until every decision is made, then write the intent, design, spec and Jira tickets. The spec and tickets are written by agents on <b>Opus 5.5 at high effort</b>, which ask you through your session. Cheap agents build every story test-first, in parallel. Five reviewer agents check every pull request. A GitHub Action, the <b>merge gate</b>, merges once all of them pass. When something is unclear, it goes back to the planning step that owns it. Nobody guesses.</p>
+<p class="lead">Tessera is a set of Claude Code <b>skills</b> and <b>subagents</b> in <code>~/.claude</code>. You start <code>claude --agent factory</code> and describe what you need in one sentence. Skills question ("grill") you until every decision is made, then write the intent, design, spec and Jira tickets. The spec and tickets are written by agents on <b>Opus 5.5 at high effort</b>, which ask you through your session. Cheap agents build every story test-first, in parallel. Five reviewer agents check every pull request. A GitHub Action, the <b>merge gate</b>, merges once all of them pass. When something is unclear, it goes back to the planning step that owns it. Nobody guesses.</p>
 
 <h3>Five principles</h3>
 <ol class="principles">
@@ -70,20 +70,20 @@
   <li><b>Test-first, with literal values.</b> Requirements are Given / when / then with exact values. Tests copy those values. Each test slice is a red commit, then a green commit.</li>
   <li><b>Loops, not guesses.</b> Implementation blockers go to <code>spec-triage</code>, review findings to <code>review-triage</code>. Each loop runs at most 5 times, then a human takes over.</li>
   <li><b>Machines merge, people approve.</b> No agent merges. The merge gate merges only when every reviewer passed the <i>same</i> commit and CI is green. Risky PRs also need your <code>human-approved</code> label.</li>
-  <li><b>Status lines, not stories.</b> In a <code>/factory</code> run you see only the questions and one line per status change (<code>Design ✓</code>, <code>&lt;KEY&gt; started</code>, <code>&lt;KEY&gt; blocked → triage</code>, <code>PR #n security passed</code>, <code>PR #n merged</code>…). No explanations, recaps of what an agent changed, loop counts or "nothing waiting" notes. Details stay in the files, Jira and the PRs.</li>
+  <li><b>Status lines, not stories.</b> In a factory session you see only the questions and one line per status change (<code>Design ✓</code>, <code>&lt;KEY&gt; started</code>, <code>&lt;KEY&gt; blocked → triage</code>, <code>PR #n security passed</code>, <code>PR #n merged</code>…). No explanations, recaps of what an agent changed, loop counts or "nothing waiting" notes. Details stay in the files, Jira and the PRs.</li>
 </ol>
 
 <h3>The four phases</h3>
 <table>
   <tr><th style="width:15%">Phase</th><th style="width:28%">Runs</th><th style="width:31%">Produces</th><th>Your part</th></tr>
-  <tr><td>Plan</td><td class="n"><code>factory</code> runs <code>intent</code> → <code>to-design</code> (if UI) → <code>to-spec</code> → <code>to-tickets</code>. Spec and tickets: <b>spec-writer</b> / <b>ticket-writer</b> agents (Opus 5.5, high)</td><td class="n">intent.md, design files, spec.md, business rules, Jira epic / stories / subtasks</td><td class="n">Answer the questions. Accept the prototype.</td></tr>
+  <tr><td>Plan</td><td class="n">the <b>factory</b> agent runs <code>intent</code> → <code>to-design</code> (if UI) → <code>to-spec</code> → <code>to-tickets</code>. Spec and tickets: <b>spec-writer</b> / <b>ticket-writer</b> agents (Opus 5.5, high)</td><td class="n">intent.md, design files, spec.md, business rules, Jira epic / stories / subtasks</td><td class="n">Answer the questions. Accept the prototype.</td></tr>
   <tr><td>Build</td><td class="n"><code>to-implement</code> + one <b>implementer</b> agent per story</td><td class="n">One branch per story, built test-first: a red test commit, then a green code commit per slice</td><td class="n">Answer the open question when a blocker needs a spec change.</td></tr>
   <tr><td>Review</td><td class="n"><code>to-pr</code>, <code>to-review</code> + 4–5 <b>reviewer</b> agents</td><td class="n">PRs, each reviewer's verdict as a PR comment</td><td class="n">Answer spec or design questions a finding raises. Review risky (H1–H4) PRs.</td></tr>
   <tr><td>Merge</td><td class="n">Merge gate (GitHub Action), <code>planning-cleanup</code></td><td class="n">Stories merged into the epic branch, then the epic merged into <code>develop</code>. Jira set to Done.</td><td class="n">Add <code>human-approved</code> when asked. Finish stopped PRs.</td></tr>
 </table>
 
 <div class="box">
-<b>Start a feature:</b> <code>/factory "Users can mark a brew as favorite"</code>. It runs the plan phase without stopping between steps, then starts the build, which runs on by itself through PRs, reviews and merges. <b>Resume at any time:</b> <code>/factory</code> without arguments shows where every feature stands and continues the one you pick (<code>/factory status</code> only shows it). <b>Quiet:</b> a <code>/factory</code> run shows only its questions and one line per step (the files hold the details), and installs missing tools itself.<br><b>Step by step instead:</b> every skill still works on its own. <code>/intent "…"</code> ends by asking <i>Start / Later</i> for the next step, and so does each skill after it.
+<b>Start a feature:</b> <code>claude --agent factory</code>, then type "Users can mark a brew as favorite". It runs the plan phase without stopping between steps, then starts the build, which runs on by itself through PRs, reviews and merges. <b>Resume at any time:</b> <code>continue</code> shows where every feature stands and continues the one you pick (<code>status</code> only shows it). <b>Quiet:</b> a factory session shows only its questions and one line per step (the files hold the details), and installs missing tools itself.<br><b>Step by step instead:</b> every skill still works on its own. <code>/intent "…"</code> ends by asking <i>Start / Later</i> for the next step, and so does each skill after it.
 </div>
 
 <!-- ============ PAGE 2 ============ -->
@@ -102,7 +102,7 @@
 </div>
 <h3>How to read it</h3>
 <ul>
-  <li><b>Happy path:</b> intent → design → spec → tickets → implement → PR → review → gate merges into the epic branch. When every story of the epic is merged, the epic goes through one final PR into <code>develop</code>. <code>/factory</code> runs the plan row without stopping; run by hand, each skill asks <i>Start / Later</i> for the next one.</li>
+  <li><b>Happy path:</b> intent → design → spec → tickets → implement → PR → review → gate merges into the epic branch. When every story of the epic is merged, the epic goes through one final PR into <code>develop</code>. The factory agent runs the plan row without stopping; run by hand, each skill asks <i>Start / Later</i> for the next one.</li>
   <li><b>Build:</b> <code>to-implement</code> starts one implementer per ready story, all in parallel, each in its own worktree. Each one reports back <b>DONE</b> (pushed, on to <code>to-pr</code>) or <b>BLOCKED</b>.</li>
   <li><b>Build loop:</b> <code>to-implement</code> hands a <b>BLOCKED</b> report to <code>spec-triage</code>, which classifies it from the evidence: <b>A·B</b> (spec gap or ambiguity) → <code>to-spec</code>, then <code>to-tickets</code>; <b>C</b> (spec clear, the ticket didn't carry it) → <code>to-tickets</code> only. Then the implementer resumes on the same branch.</li>
   <li><b>Review loop:</b> a blocking finding or a red CI goes to <code>review-triage</code>: <b>D</b> (design wrong) → <code>to-design</code>, <b>S</b> (spec wrong) → <code>to-spec</code>, <b>F</b> (code wrong) → <code>to-tickets</code>. Each ends in <code>to-tickets</code>. <b>X</b> (reviewer wrong) is dismissed; <b>J</b> (judgement call) is fixed or kept, as triage decides. The fix is built as a new <code>Fix:</code> subtask (or <code>Change:</code> story), then <i>every</i> reviewer runs again.</li>
@@ -115,7 +115,7 @@
 <h2>2 · What triggers what</h2>
 <table class="tight triggers">
   <tr><th style="width:25%">When…</th><th style="width:51%">…this happens</th><th>Notes</th></tr>
-  <tr><td>You run <code>/factory "…"</code> or <code>/intent "…"</code></td><td class="n">Grilling on the business reason, scope, constraints and success criteria → <code>intent.md</code>. It judges whether the UI changes and goes on to <code>to-design</code> or <code>to-spec</code> (<code>/intent</code> asks Start or Later first). If unsure, it asks you.</td><td class="n">Never changed automatically: if it's wrong later, you run <code>intent-revise</code></td></tr>
+  <tr><td>In the factory session you type "…", or you run <code>/intent "…"</code></td><td class="n">Grilling on the business reason, scope, constraints and success criteria → <code>intent.md</code>. It judges whether the UI changes and goes on to <code>to-design</code> or <code>to-spec</code> (<code>/intent</code> asks Start or Later first). If unsure, it asks you.</td><td class="n">Never changed automatically: if it's wrong later, you run <code>intent-revise</code></td></tr>
   <tr><td>Intent changes the UI</td><td class="n"><code>to-design</code>: grill → design screens → publish an HTML prototype → you accept → screenshots + <code>design-changes.md</code> → commit on <code>plan/&lt;feature&gt;</code>.</td><td class="n">No design files yet → <code>design-baseline</code> documents the current UI first</td></tr>
   <tr><td>Design accepted, or no UI</td><td class="n"><code>to-spec</code> relays for its <b>spec-writer</b> agent (Opus 5.5, high): it reads the codebase, grills business gaps and technical decisions → <code>spec.md</code> (B#, R#, technical design) + <code>docs/business-rules.md</code> → commit. A decision that changes the UI <b>pauses</b> it: <code>to-design</code> runs to the end (you accept, it commits), then the spec continues.</td><td class="n">Never runs alongside <code>to-design</code></td></tr>
   <tr><td>Spec written</td><td class="n"><code>to-tickets</code> checks Jira; its <b>ticket-writer</b> agent (Opus 5.5, high) writes epic, stories (max 3 points), subtasks → Jira. Renames <code>plan/</code> to <code>epic/&lt;KEY&gt;-…</code> (or <code>bug/…</code>) and pushes it.</td><td class="n">Gap in the spec → offers <code>to-spec</code> with the change request</td></tr>
@@ -125,7 +125,7 @@
   <tr><td>PR opened</td><td class="n"><code>to-review</code> starts the reviewers in the PR's marker in parallel (only one ui-ux at a time). Each posts its verdict comment tied to the head SHA.</td><td class="n">Always code, spec, tests, security; + ui-ux if UI changed</td></tr>
   <tr><td>Any finding or CI failure</td><td class="n">PR loop +1 → <code>review-triage</code> (F / S / D / X / J) → design / spec / tickets → <code>to-implement</code> builds the fix → all reviewers again.</td><td class="n">&gt; 5 loops → <code>factory-stopped</code></td></tr>
   <tr><td>All findings X or J</td><td class="n">Reason replied in the finding's thread, resolved. Those reviewers re-run: accept or dispute.</td><td class="n">One dispute; the second decision is final</td></tr>
-  <tr><td>You comment on a PR</td><td class="n"><code>/factory</code> triages each: fixed + resolved, or answered.</td><td class="n">No loop count</td></tr>
+  <tr><td>You comment on a PR</td><td class="n">The factory agent triages each: fixed + resolved, or answered.</td><td class="n">No loop count</td></tr>
   <tr><td>Diff matches H1–H4</td><td class="n"><code>needs-human-review</code> label. The gate waits until you review and add <code>human-approved</code>.</td><td class="n">Never on a feature's final PR</td></tr>
   <tr><td>All reviewers PASS on the same head</td><td class="n">Merge gate merges (CI green, up to date, no conflict, approved if needed) → story → Done.</td><td class="n">Gate runs on comments, PR events, every 30 min</td></tr>
   <tr><td>Last story of the epic merged</td><td class="n"><code>to-pr --final &lt;EPIC&gt;</code>: final PR <code>epic/…</code> → <code>develop</code> → full review of the whole epic.</td><td class="n">No open story PRs allowed</td></tr>
@@ -247,6 +247,7 @@
 <h2>6 · Agents and guardrails</h2>
 <table>
   <tr><th style="width:20%">Agent</th><th style="width:11%">Model</th><th>Job</th></tr>
+  <tr><td>factory</td><td class="n">your session's model</td><td class="n">The conductor. Start a session with <code>claude --agent factory</code>: runs the plan phase, then the build, and shows only status lines. Its rules are its system prompt, so a long session never loses them.</td></tr>
   <tr><td>spec-writer</td><td class="n">Opus 5.5 high</td><td class="n">Writes or revises the spec and business rules for <code>to-spec</code>, grilling you through the relay.</td></tr>
   <tr><td>ticket-writer</td><td class="n">Opus 5.5 high</td><td class="n">Breaks the spec into epic, stories and subtasks and publishes them for <code>to-tickets</code>.</td></tr>
   <tr><td>installer</td><td class="n">Haiku 5.5</td><td class="n">Installs or upgrades a tool a step needs (Node.js, Playwright, <code>designmd</code>…) and answers in one line, so installs stay out of your session.</td></tr>
@@ -303,7 +304,7 @@
 <ul>
   <li>Answer grilling questions. Every one comes with a recommendation.</li>
   <li>Accept or change the prototype. The spec is accepted by default: ask for changes when you want them.</li>
-  <li>Review <code>needs-human-review</code> PRs and add <code>human-approved</code>, or comment what to change and run <code>/factory</code>.</li>
+  <li>Review <code>needs-human-review</code> PRs and add <code>human-approved</code>, or comment what to change and continue in a factory session.</li>
   <li>Finish <code>factory-stopped</code> items and merge conflicts.</li>
   <li>Close Jira tickets Tessera lists as no longer needed. It never deletes issues.</li>
 </ul>
@@ -311,8 +312,8 @@
 <div>
 <h3>Commands</h3>
 <table class="cmd">
-  <tr><td style="width:44%"><code>/factory "…"</code></td><td class="n">start a feature or bug, run it all</td></tr>
-  <tr><td><code>/factory [path | key | status]</code></td><td class="n">where things stand, continue one</td></tr>
+  <tr><td style="width:44%"><code>claude --agent factory</code>, then "…"</td><td class="n">start a feature or bug, run it all</td></tr>
+  <tr><td>factory session: <code>continue</code>, path, key or <code>status</code></td><td class="n">where things stand, continue one</td></tr>
   <tr><td><code>/setup-factory [check]</code></td><td class="n">set up or check Tessera</td></tr>
   <tr><td><code>/intent "…"</code></td><td class="n">start step by step</td></tr>
   <tr><td><code>/intent-revise &lt;path&gt; "…"</code></td><td class="n">change an intent</td></tr>
@@ -413,7 +414,7 @@ function label(s, x, y, t, o = {}) {
   box(s, c[2], r[1], W, H, 'skill', 'to-design', 'only if UI changes', { dashed:1, you:1 });
   box(s, c[3], r[1], W, H, 'skill', 'to-spec', 'spec-writer · Opus', { you:1 });
   box(s, c[4], r[1], W, H, 'skill', 'to-tickets', 'ticket-writer · Opus', {});
-  mk(s, 'text', { x:12, y:20, style:'font-size:8.6px;font-weight:700;fill:#4f46e5' }, '/factory runs this row');
+  mk(s, 'text', { x:12, y:20, style:'font-size:8.6px;font-weight:700;fill:#4f46e5' }, 'factory agent runs this row');
   box(s, c[4], r[2], W, H, 'skill', 'to-implement', 'orchestrator');
   stack(c[3], r[2], 'agent');
   box(s, c[3], r[2], W, H, 'agent', 'implementer ×N', 'Haiku · worktree · TDD');
@@ -525,7 +526,7 @@ function label(s, x, y, t, o = {}) {
     path(s, [[x1, y], [x2, y]], o.col || 'dark', { dash:o.dash });
     label(s, (X[a] + X[b]) / 2, y - 4, t, { cls:o.cls });
   }
-  msg(0, 0, 1, '/factory "…"');
+  msg(0, 0, 1, 'factory agent "…"');
   msg(1, 1, 0, 'grilling: intent · design · spec questions', { dash:1 });
   msg(2, 0, 1, 'answers · accept prototype');
   msg(3, 1, 2, 'publish epic · stories · subtasks');

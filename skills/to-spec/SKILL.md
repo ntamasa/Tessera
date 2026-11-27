@@ -27,7 +27,7 @@ run: <factory | manual>
 Follow the spec-writer skill. Talk to the user only through relay blocks.
 ```
 
-`run` is `factory` in a factory run (`~/.claude/references/factory-run.md`), otherwise `manual`. Then relay until the agent sends `done` or `stopped`. The one request you may run: **`to-design`** (call the Skill tool with "to-design" and the request's args).
+`run` is `factory` in a factory run (a session started with `claude --agent factory`), otherwise `manual`. Then relay until the agent sends `done` or `stopped`. The one request you may run: **`to-design`** (call the Skill tool with "to-design" and the request's args).
 
 ## 3. Result
 

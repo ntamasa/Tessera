@@ -27,7 +27,7 @@ run: <factory | manual>
 Follow the ticket-writer skill. Talk to the user only through relay blocks.
 ```
 
-`run` is `factory` in a factory run (`~/.claude/references/factory-run.md`), otherwise `manual`. Then relay until the agent sends `done` or `stopped`. It may not request any skill.
+`run` is `factory` in a factory run (a session started with `claude --agent factory`), otherwise `manual`. Then relay until the agent sends `done` or `stopped`. It may not request any skill.
 
 ## 3. Result
 

@@ -53,6 +53,6 @@ MISSING merge gate      PR #3 (main), PR #4 (develop): merge them to turn the ga
 
 Then these notes, once:
 
-- **Your approval is a label.** GitHub doesn't let you approve your own PRs, and the factory opens PRs as you. For a `needs-human-review` PR: review it, then add the `human-approved` label. Every new push removes it again. To ask for changes instead, comment on the PR (inline or not) and run `/factory`: each comment is fixed (its thread resolved) or answered with the reason.
+- **Your approval is a label.** GitHub doesn't let you approve your own PRs, and the factory opens PRs as you. For a `needs-human-review` PR: review it, then add the `human-approved` label. Every new push removes it again. To ask for changes instead, comment on the PR (inline or not) and run the factory (`claude --agent factory`): each comment is fixed (its thread resolved) or answered with the reason.
 - **Branch protection (optional):** if your plan supports it, protect `develop` and the default branch against direct pushes. Don't require approving reviews: the gate merges as GitHub Actions, and you can't approve your own PRs.
 - **Stale PRs:** when a PR's target branch moved on (another story merged), the gate merges the target into the PR and waits for CI again. The reviewers' passes still count, because that merge is the only new commit. Branch and PR model: `~/.claude/references/branches.md`.

@@ -62,7 +62,7 @@ If step 3 changed project files (`.gitignore`, `.worktreeinclude`, `CLAUDE.md`),
 
 ## 6. Report
 
-**From factory:** no checklist. Nothing left for the user: end without a word (the factory says `Setup ✓`). A restart in **Your steps**: show the steps, one line each, ending with "then run `/factory` again", and end. Other steps left: show them, one line each, then ask with AskUserQuestion, options exactly "Done" and "Stop": "Setup needs these steps from you. Done?" On Done, run the check script again and repeat this for what's still missing; on Stop, end.
+**From factory:** no checklist. Nothing left for the user: end without a word (the factory says `Setup ✓`). A restart in **Your steps**: show the steps, one line each, ending with "then start `claude --agent factory` again", and end. Other steps left: show them, one line each, then ask with AskUserQuestion, options exactly "Done" and "Stop": "Setup needs these steps from you. Done?" On Done, run the check script again and repeat this for what's still missing; on Stop, end.
 
 **Otherwise:** one checklist, the script's items first, then project-commands, artifacts, Jira and GitHub's lines:
 
