@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>AI Factory Workflow</title>
+<title>Tessera Workflow</title>
 <style>
   @page { size: A4; margin: 14mm 15mm 16mm 15mm; }
   :root {
@@ -58,10 +58,10 @@
 <body>
 
 <!-- ============ PAGE 1 ============ -->
-<h1>The AI Factory</h1>
+<h1>Tessera</h1>
 <div class="sub">How a one-sentence request becomes reviewed, tested, merged code. Onboarding guide.</div>
 
-<p class="lead">The factory is a set of Claude Code <b>skills</b> and <b>subagents</b> in <code>~/.claude</code>. You type <code>/factory</code> and describe what you need in one sentence. Skills question ("grill") you until every decision is made, then write the intent, design, spec and Jira tickets. The spec and tickets are written by agents on <b>Opus 5.5 at extra-high effort</b>, which ask you through your session. Cheap agents build every story test-first, in parallel. Five reviewer agents check every pull request. A GitHub Action, the <b>merge gate</b>, merges once all of them pass. When something is unclear, it goes back to the planning step that owns it. Nobody guesses.</p>
+<p class="lead">Tessera is a set of Claude Code <b>skills</b> and <b>subagents</b> in <code>~/.claude</code>. You type <code>/factory</code> and describe what you need in one sentence. Skills question ("grill") you until every decision is made, then write the intent, design, spec and Jira tickets. The spec and tickets are written by agents on <b>Opus 5.5 at extra-high effort</b>, which ask you through your session. Cheap agents build every story test-first, in parallel. Five reviewer agents check every pull request. A GitHub Action, the <b>merge gate</b>, merges once all of them pass. When something is unclear, it goes back to the planning step that owns it. Nobody guesses.</p>
 
 <h3>Five principles</h3>
 <ol class="principles">
@@ -87,7 +87,7 @@
 
 <!-- ============ PAGE 2 ============ -->
 <div class="page">
-<h2>1 · The factory loop</h2>
+<h2>1 · The Tessera loop</h2>
 <svg id="loop"></svg>
 <div class="legend">
   <span><i class="sw" style="border-color:#475569;background:#fff"></i>skill (runs in your session)</span>
@@ -105,7 +105,7 @@
   <li><b>Build:</b> <code>to-implement</code> starts one implementer per ready story, all in parallel, each in its own worktree. Each one reports back <b>DONE</b> (pushed, on to <code>to-pr</code>) or <b>BLOCKED</b>.</li>
   <li><b>Build loop:</b> <code>to-implement</code> hands a <b>BLOCKED</b> report to <code>spec-triage</code>, which classifies it from the evidence: <b>A·B</b> (spec gap or ambiguity) → <code>to-spec</code>, then <code>to-tickets</code>; <b>C</b> (spec clear, the ticket didn't carry it) → <code>to-tickets</code> only. Then the implementer resumes on the same branch.</li>
   <li><b>Review loop:</b> a blocking finding or a red CI goes to <code>review-triage</code>: <b>D</b> (design wrong) → <code>to-design</code>, <b>S</b> (spec wrong) → <code>to-spec</code>, <b>F</b> (code wrong) → <code>to-tickets</code>. Each ends in <code>to-tickets</code>. <b>X</b> (reviewer wrong) is dismissed; <b>J</b> (judgement call) is fixed or kept, as triage decides. The fix is built as a new <code>Fix:</code> subtask (or <code>Change:</code> story), then <i>every</i> reviewer runs again.</li>
-  <li><b>Merge:</b> reviewers only post verdict comments. The merge gate (a GitHub Action) reads them and merges once all passed on the same head and CI is green, waiting for you only if the PR needs human review. Each merge sends the factory back to <code>to-implement</code> for the stories that were waiting.</li>
+  <li><b>Merge:</b> reviewers only post verdict comments. The merge gate (a GitHub Action) reads them and merges once all passed on the same head and CI is green, waiting for you only if the PR needs human review. Each merge sends Tessera back to <code>to-implement</code> for the stories that were waiting.</li>
 </ul>
 </div>
 
@@ -131,7 +131,7 @@
   <tr><td>Final PR: all reviewers PASS</td><td class="n"><code>planning-cleanup</code> pushes the cleanup commit (only deletes planning files) → gate merges into <code>develop</code> → epic → Done.</td><td class="n">Cleanup keeps the passes valid</td></tr>
   <tr><td>Target branch moved on</td><td class="n">Gate merges the target into the PR and waits for CI again. Reviewer passes stay valid.</td><td class="n">"Update + CI only"</td></tr>
   <tr><td>Any other new commit on a PR</td><td class="n">Every pass becomes invalid, <code>human-approved</code> is removed, every reviewer runs again.</td><td class="n"></td></tr>
-  <tr><td>Something merged in a review run</td><td class="n"><code>to-review</code> → <code>to-implement</code>: waiting stories start.</td><td class="n">The factory keeps moving</td></tr>
+  <tr><td>Something merged in a review run</td><td class="n"><code>to-review</code> → <code>to-implement</code>: waiting stories start.</td><td class="n">Tessera keeps moving</td></tr>
   <tr><td>Merge conflict / CI infra failure</td><td class="n">Reported for a human. The gate never resolves conflicts.</td><td class="n"></td></tr>
 </table>
 </div>
@@ -146,7 +146,7 @@
 <!-- ============ PAGE 5 ============ -->
 <div class="page">
 <h2>4 · Branches and pull requests</h2>
-<p>One feature = one <b>container branch</b>. It holds the planning files first, then the merged stories. The main checkout stays on it while the feature is in the factory.</p>
+<p>One feature = one <b>container branch</b>. It holds the planning files first, then the merged stories. The main checkout stays on it while the feature is in Tessera.</p>
 <svg id="git"></svg>
 <div class="legend">
   <span><i class="sw" style="border-color:#94a3b8;background:#94a3b8;border-radius:50%"></i>planning commit</span>
@@ -276,7 +276,7 @@
 <table>
   <tr><td style="width:12%">H1</td><td class="n"><b>Irreversible:</b> destructive migrations, permanent deletes, outbound email / SMS / payment / webhooks</td></tr>
   <tr><td>H2</td><td class="n"><b>Security feature:</b> auth, roles, sessions, tokens, crypto, secrets, CORS / CSP, rate limits</td></tr>
-  <tr><td>H3</td><td class="n"><b>Infra / CI / factory config:</b> <code>.github/</code>, Docker, deploy, <code>.claude/</code>, CLAUDE.md, <code>.env.example</code></td></tr>
+  <tr><td>H3</td><td class="n"><b>Infra / CI / Tessera config:</b> <code>.github/</code>, Docker, deploy, <code>.claude/</code>, CLAUDE.md, <code>.env.example</code></td></tr>
   <tr><td>H4</td><td class="n"><b>Contract or data:</b> breaking API change, money / billing, personal data</td></tr>
 </table>
 <p class="cap">When unsure, the rule applies. GitHub won't let you approve your own PR, so your approval is the <code>human-approved</code> label.</p>
@@ -304,7 +304,7 @@
   <li>Accept or change the prototype. The spec is accepted by default: ask for changes when you want them.</li>
   <li>Review <code>needs-human-review</code> PRs and add <code>human-approved</code>, or comment what to change and run <code>/factory</code>.</li>
   <li>Finish <code>factory-stopped</code> items and merge conflicts.</li>
-  <li>Close Jira tickets the factory lists as no longer needed. It never deletes issues.</li>
+  <li>Close Jira tickets Tessera lists as no longer needed. It never deletes issues.</li>
 </ul>
 </div>
 <div>
@@ -312,7 +312,7 @@
 <table class="cmd">
   <tr><td style="width:44%"><code>/factory "…"</code></td><td class="n">start a feature or bug, run it all</td></tr>
   <tr><td><code>/factory [path | key | status]</code></td><td class="n">where things stand, continue one</td></tr>
-  <tr><td><code>/setup-factory [check]</code></td><td class="n">set up or check the factory</td></tr>
+  <tr><td><code>/setup-factory [check]</code></td><td class="n">set up or check Tessera</td></tr>
   <tr><td><code>/intent "…"</code></td><td class="n">start step by step</td></tr>
   <tr><td><code>/intent-revise &lt;path&gt; "…"</code></td><td class="n">change an intent</td></tr>
   <tr><td><code>/to-design [intent]</code></td><td class="n">design the UI</td></tr>
@@ -325,7 +325,7 @@
 </table>
 <h3>Labels</h3>
 <table>
-  <tr><td style="width:44%"><code>factory</code></td><td class="n">opened by the factory, the gate watches it</td></tr>
+  <tr><td style="width:44%"><code>factory</code></td><td class="n">opened by Tessera, the gate watches it</td></tr>
   <tr><td><code>needs-human-review</code></td><td class="n">matched H1–H4</td></tr>
   <tr><td><code>human-approved</code></td><td class="n">you reviewed it (removed on every new push)</td></tr>
   <tr><td><code>factory-loops-n</code></td><td class="n">loop count (PR, or a Jira subtask)</td></tr>

@@ -1,0 +1,3 @@
+- When reporting information to me, be extremely concise and sacrifice grammar for the sake of concision.
+- Be brave to disagree with me. Goal is best possible solution, not agreement — push back when my idea/approach is worse, explain why, propose better.
+- When committing, follow `~/.claude/references/commits.md` (ticket-ID prefix, imperative uppercase message, no body unless needed, never any Claude attribution).

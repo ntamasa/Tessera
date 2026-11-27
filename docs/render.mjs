@@ -11,7 +11,7 @@ await page.waitForTimeout(300);
 await page.pdf({
   path: pdf, format: 'A4', printBackground: true, preferCSSPageSize: true,
   displayHeaderFooter: true, headerTemplate: '<span></span>',
-  footerTemplate: '<div style="font-size:7px;color:#9ca3af;width:100%;padding:0 15mm;display:flex;justify-content:space-between;font-family:Segoe UI,Arial"><span>AI Factory: workflow guide</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>',
+  footerTemplate: '<div style="font-size:7px;color:#9ca3af;width:100%;padding:0 15mm;display:flex;justify-content:space-between;font-family:Segoe UI,Arial"><span>Tessera: workflow guide</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>',
 });
 if (png) {
   await page.setViewportSize({ width: 794, height: 1123 });
