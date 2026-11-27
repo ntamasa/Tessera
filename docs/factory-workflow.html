@@ -70,7 +70,7 @@
   <li><b>Test-first, with literal values.</b> Requirements are Given / when / then with exact values. Tests copy those values. Each test slice is a red commit, then a green commit.</li>
   <li><b>Loops, not guesses.</b> Implementation blockers go to <code>spec-triage</code>, review findings to <code>review-triage</code>. Each loop runs at most 5 times, then a human takes over.</li>
   <li><b>Machines merge, people approve.</b> No agent merges. The merge gate merges only when every reviewer passed the <i>same</i> commit and CI is green. Risky PRs also need your <code>human-approved</code> label.</li>
-  <li><b>Status lines, not stories.</b> In a <code>/factory</code> run you see only the questions and one line per step (<code>Spec ✓</code>, <code>Tickets ✓ updated</code>, <code>&lt;KEY&gt; split: &lt;why&gt;</code>, <code>PR #n merged</code>…). Details stay in the files, Jira and the PRs.</li>
+  <li><b>Status lines, not stories.</b> In a <code>/factory</code> run you see only the questions and one line per status change (<code>Design ✓</code>, <code>&lt;KEY&gt; started</code>, <code>&lt;KEY&gt; blocked → triage</code>, <code>PR #n security passed</code>, <code>PR #n merged</code>…). No explanations, loop counts or "nothing waiting" notes. Details stay in the files, Jira and the PRs.</li>
 </ol>
 
 <h3>The four phases</h3>

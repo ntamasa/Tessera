@@ -38,7 +38,7 @@ Stop and explain if any fails:
      - `<why>`: after spec-triage (step 5.3) → `spec loopback`; called `from to-review` → `review loopback`; otherwise none, and drop ` from <why>`.
      - Examples: `BREW-17: Merge spec and ticket updates from review loopback`, `BREW-23: Merge ticket updates from spec loopback`, `BREW-24: Merge latest epic branch`.
 3. **Ready:** a story or bug is ready when it isn't Done and every story blocking it is Done (merged into the container). Others wait: "waiting for <KEY>".
-4. Show the plan in a few lines: ready items with branch and subtask count, waiting ones with what they wait for, skipped ones with why.
+4. Show the plan in a few lines: ready items with branch and subtask count, waiting ones with what they wait for, skipped ones with why. In a factory run, only `Build: <n> started, <w> waiting`, and later one status line per change (`<KEY> started`, `<KEY> restarted`, `<KEY> done`, `<KEY> blocked → triage`, `<KEY> stopped`), nothing else.
 5. Keep a loop count per subtask, starting from the number in its Jira label `factory-loops-<n>` if it has one, else 0.
 
 ## 3. Run
