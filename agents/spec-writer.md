@@ -2,7 +2,7 @@
 name: spec-writer
 description: Writes or revises one feature's or bug's spec.md and docs/business-rules.md, grilling the user through the to-spec relay. Started only by the to-spec skill.
 model: claude-opus-5-5
-effort: xhigh
+effort: high
 tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, Skill, WebSearch, WebFetch
 skills:
   - spec-writer
