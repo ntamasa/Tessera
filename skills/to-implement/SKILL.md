@@ -59,6 +59,8 @@ Follow the implementer skill. End with the IMPLEMENTER REPORT.
 
 ## 4. On each report
 
+In a factory run, an agent or background task finishing shows only its status line from `~/.claude/references/factory-run.md`: never what it changed, checked or found, loop counts, leftover worktrees, or "nothing is waiting".
+
 1. Transition every subtask under `done` to "Done".
 2. Remove its worktree: `git worktree remove <worktree>`. If that fails, leave it and list it in the final report.
 3. **DONE:** push the branch (`git push -u origin <branch>`) and transition the item to "In Review".

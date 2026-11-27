@@ -47,6 +47,8 @@ Every review covers the whole PR at its current `head`. After any new commit tha
 
 ## 4. On a PR's reports (once all its reviewers are back, or right away when none had to run)
 
+In a factory run, an agent or background task finishing shows only its status line from `~/.claude/references/factory-run.md`: never what it changed, checked or found, loop counts, leftover worktrees, or "nothing is waiting".
+
 The PR's findings: every reviewer's findings (each with its `thread`), plus one `[rule]` finding from `human` per item in `human` (its id, `where` = the thread's `path:line` or "PR comment", the user's text quoted as the source).
 
 1. If any report has `human review` set and the PR isn't a feature final PR, add the `needs-human-review` label (`gh pr edit <n> --add-label needs-human-review`) and post the reasons with `node ~/.claude/skills/to-review/scripts/pr-threads.mjs note <n> human-review`, ending with: "Review it, then add `human-approved`, or comment what to change (inline or not) and run `/factory`."
