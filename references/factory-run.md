@@ -7,7 +7,7 @@ The user follows the run at a glance and opens the files when they want the deta
 ## Show
 
 - **Questions**, as the skills ask them (grilling, the design review, setup steps). Before the design review, only its artifact link. Nothing else around them.
-- **One line when a step ends:**
+- **Status lines, only these, one per status change:**
 
   | Step | Line |
   |---|---|
@@ -17,15 +17,14 @@ The user follows the run at a glance and opens the files when they want the deta
   | spec | `Spec ✓ <path>` |
   | spec revised (triage) | `Spec ✓ revised <path>` |
   | tickets | `Tickets ✓ <KEY>: <n> stories (<p> pts), <b> bugs, <s> subtasks` |
-  | tickets updated (triage) | `Tickets ✓ updated <KEY>` |
+  | tickets updated (triage) | `Tickets ✓ updated <KEY>`, then the ticket-writer's per-issue lines |
   | ticket split | `<KEY> split: <why, one sentence>` |
-  | build restarted | `<KEY> restarted` |
   | build start | `Build: <n> started, <w> waiting` |
-  | a story or bug | `<KEY> done`, or `<KEY> blocked → triage` |
+  | a story or bug | `<KEY> started`, `<KEY> restarted`, `<KEY> done`, `<KEY> blocked → triage`, `<KEY> stopped` |
   | triage | one line per blocker or finding: `<KEY>: class <X>` |
-  | PRs | `PR #<n> <KEY> opened`, `PR #<n> passed`, `PR #<n>: <k> findings → triage`, `PR #<n>: <k> of your comments → triage`, `PR #<n> merged`, `PR #<n> needs your review` |
-- **Nothing else between steps.** No prose about what just happened, what runs next, why, or whether anything is waiting. A question that comes next just comes. No recap of which stories or subtasks are building.
-- **A stop or failure:** one sentence on what and why, then how to continue (`/factory <intent path or key>`).
+  | PRs | `PR #<n> <KEY> opened`, `PR #<n> <reviewer> passed`, `PR #<n> <reviewer>: <k> findings → triage`, `PR #<n> passed`, `PR #<n>: <k> of your comments → triage`, `PR #<n> merged`, `PR #<n> needs your review` |
+- **Nothing else, ever.** No prose before, between or after the lines, and none at the end of a turn while work runs in the background (the user sees what runs). In particular never: what a blocker or gap was, loop counts or limits, why something waits or hasn't started yet, what an agent was asked to do, that the user will or won't be needed later, that nothing is waiting, which stories are building. A question that comes next just comes.
+- **A stop of the whole run:** one sentence on what and why, then how to continue (`/factory <intent path or key>`). A single item stopping is just `<KEY> stopped`: the user sees it at the end.
 - **Installs:** the one sentence from `~/.claude/references/installs.md`.
 
 ## Don't show

@@ -63,7 +63,7 @@ Then commit `tickets/` and `tickets.json` on the feature's container branch (`~/
 
 ## 5. Overview
 
-**Factory run:** `say` is one line, `Tickets ✓ <EPIC or BUG KEY>: <n> stories (<p> pts), <b> bugs, <s> subtasks`, plus `<KEY>: no longer needed` per ticket in `notNeeded` and, when called by a triage skill, its per-issue result lines. Then send `done`.
+**Factory run:** `say` is one line, `Tickets ✓ <EPIC or BUG KEY>: <n> stories (<p> pts), <b> bugs, <s> subtasks` (called by a triage skill: `Tickets ✓ updated <EPIC or BUG KEY>`), plus `<KEY>: no longer needed` per ticket in `notNeeded` and, when called by a triage skill, its per-issue result lines. Then send `done`.
 
 **Manual run:** put what was published in `say`, as a tree in a code block, built from the manifest's keys, so the user sees the whole set at a glance:
 
