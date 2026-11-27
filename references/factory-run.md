@@ -15,11 +15,15 @@ The user follows the run at a glance and opens the files when they want the deta
   | intent | `Intent ✓ <path>` |
   | design | `Design ✓ <artifact link>`, then the path of every new or changed screenshot, one per line |
   | spec | `Spec ✓ <path>` |
+  | spec revised (triage) | `Spec ✓ revised <path>` |
   | tickets | `Tickets ✓ <KEY>: <n> stories (<p> pts), <b> bugs, <s> subtasks` |
+  | tickets updated (triage) | `Tickets ✓ updated <KEY>` |
+  | build restarted | `<KEY> restarted` |
   | build start | `Build: <n> started, <w> waiting` |
   | a story or bug | `<KEY> done`, or `<KEY> blocked → triage` |
   | triage | one line per blocker or finding: `<KEY>: class <X>` |
   | PRs | `PR #<n> <KEY> opened`, `PR #<n> passed`, `PR #<n>: <k> findings → triage`, `PR #<n>: <k> of your comments → triage`, `PR #<n> merged`, `PR #<n> needs your review` |
+- **Nothing else between steps.** No prose about what just happened, what runs next, why, or whether anything is waiting. A question that comes next just comes.
 - **A stop or failure:** one sentence on what and why, then how to continue (`/factory <intent path or key>`).
 - **Installs:** the one sentence from `~/.claude/references/installs.md`.
 
@@ -43,4 +47,4 @@ Then ask the decision again, with updated options if the answer changed them.
 
 ## Agents
 
-The relay agents (spec-writer, ticket-writer) follow these rules too: start them with `run: factory` in their prompt, and show their `say` as it comes.
+The relay agents (spec-writer, ticket-writer) follow these rules too: start them with `run: factory` in their prompt. Show their `say` only when it carries a question for the user; when they finish, show only the step's line from the table above.

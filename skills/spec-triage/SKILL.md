@@ -29,7 +29,7 @@ Evidence for every class: quote the spec section (heading) and the ticket text, 
 
 **When the evidence doesn't settle it,** pick the class that goes back further: A over B, B over C. A wrong A only costs a question in `to-spec`; a wrong C hides a spec gap.
 
-Show the user one block per blocker (the blocked subtask, the question, the class, the evidence), then go straight on to step 3. Don't wait for a confirmation.
+Outside a factory run, show the user one block per blocker (the blocked subtask, the question, the class, the evidence); in a factory run, only the triage line per item. Then go straight on to step 3. Don't wait for a confirmation.
 
 ## 3. Fix
 
