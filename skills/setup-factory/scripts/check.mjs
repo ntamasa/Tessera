@@ -100,13 +100,13 @@ else {
 const expected = [
   ...["design-baseline", "github-setup", "grilling", "implementer", "intent", "intent-revise", "jira", "jira-setup",
     "planning-cleanup", "review-triage", "reviewer", "spec-triage", "tdd", "to-design", "to-implement", "to-pr",
-    "to-review", "to-spec", "to-tickets", "web-design-guidelines", "setup-factory", "factory", "spec-writer",
+    "to-review", "to-spec", "to-tickets", "web-design-guidelines", "setup-factory", "spec-writer",
     "ticket-writer"].map((s) => `skills/${s}/SKILL.md`),
   "skills/jira/scripts/jira.mjs", "skills/to-review/scripts/pr-threads.mjs", "skills/to-implement/scripts/branch-name.mjs", "skills/github-setup/assets/factory-merge-gate.yml",
   "skills/tdd/tests.md", "skills/tdd/mocking.md",
   ...["implementer", "reviewer-code", "reviewer-security", "reviewer-spec", "reviewer-tests", "reviewer-ui-ux", "spec-writer",
-    "ticket-writer", "installer"].map((a) => `agents/${a}.md`),
-  ...["branches", "design-format", "human-review", "intent-format", "spec-format", "ticket-format", "relay", "installs", "factory-run"].map((r) => `references/${r}.md`),
+    "ticket-writer", "installer", "factory"].map((a) => `agents/${a}.md`),
+  ...["branches", "design-format", "human-review", "intent-format", "spec-format", "ticket-format", "relay", "installs"].map((r) => `references/${r}.md`),
   "hooks/agent-guard.mjs",
 ];
 const missing = expected.filter((f) => !existsSync(join(CLAUDE, f)));
