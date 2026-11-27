@@ -25,7 +25,6 @@ The user follows the run at a glance and opens the files when they want the deta
   | triage | one line per blocker or finding: `<KEY>: class <X>` |
   | PRs | `PR #<n> <KEY> opened`, `PR #<n> passed`, `PR #<n>: <k> findings → triage`, `PR #<n>: <k> of your comments → triage`, `PR #<n> merged`, `PR #<n> needs your review` |
 - **Nothing else between steps.** No prose about what just happened, what runs next, why, or whether anything is waiting. A question that comes next just comes. No recap of which stories or subtasks are building.
-- **A decision an agent made that the user would see and the spec doesn't cover:** never report it as prose and never let it pass silently. Ask it with AskUserQuestion (the agent's choice first, marked Recommended); a different answer goes through `to-spec` revise.
 - **A stop or failure:** one sentence on what and why, then how to continue (`/factory <intent path or key>`).
 - **Installs:** the one sentence from `~/.claude/references/installs.md`.
 

@@ -13,6 +13,7 @@ Tessera is a set of Claude Code **skills** and **subagents** in `~/.claude`. You
 3. **Test-first, with literal values.** Requirements are Given / when / then with exact values. Tests copy those values. Each test slice is a red commit, then a green commit.
 4. **Loops, not guesses.** Implementation blockers go to `spec-triage`, review findings to `review-triage`. Each loop runs at most 5 times, then a human takes over.
 5. **Machines merge, people approve.** No agent merges. The merge gate merges only when every reviewer passed the *same* commit and CI is green. Risky PRs also need your `human-approved` label.
+6. **Status lines, not stories.** In a `/factory` run you see only the questions and one line per step (`Spec ✓`, `Tickets ✓ updated`, `<KEY> split: <why>`, `PR #n merged`…). Details stay in the files, Jira and the PRs.
 
 ## The four phases
 
