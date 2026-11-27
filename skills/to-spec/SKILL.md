@@ -1,6 +1,6 @@
 ---
 name: to-spec
-description: Turn an intent.md (and design files, if any) into a spec.md with the business rules, testable requirements and technical design needed to build it, and keep docs/business-rules.md up to date. The spec-writer agent (Opus, extra-high effort) does the work and grills the user through this skill, which relays its questions and the answers word for word. Calls to-design when a decision changes the UI. Use when the user has an intent (and design) and wants to plan the implementation, asks for a spec, or asks to run to-spec.
+description: Turn an intent.md (and design files, if any) into a spec.md with the business rules, testable requirements and technical design needed to build it, and keep docs/business-rules.md up to date. The spec-writer agent (Opus, high effort) does the work and grills the user through this skill, which relays its questions and the answers word for word. Calls to-design when a decision changes the UI. Use when the user has an intent (and design) and wants to plan the implementation, asks for a spec, or asks to run to-spec.
 argument-hint: "[path to intent.md, default ./intent.md] [change request, only to revise an existing spec.md]"
 ---
 

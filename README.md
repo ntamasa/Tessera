@@ -4,7 +4,7 @@ How a one-sentence request becomes reviewed, tested, merged code. Onboarding gui
 
 > This README is the Markdown copy of `docs/factory-workflow.pdf` (built from `docs/factory-workflow.html`). Keep the two in sync. Only the [Setup](#setup) section is in this README alone.
 
-Tessera is a set of Claude Code **skills** and **subagents** in `~/.claude`. You type `/factory` and describe what you need in one sentence. Skills question ("grill") you until every decision is made, then write the intent, design, spec and Jira tickets. The spec and tickets are written by agents on **Opus 5.5 at extra-high effort**, which ask you through your session. Cheap agents build every story test-first, in parallel. Five reviewer agents check every pull request. A GitHub Action, the **merge gate**, merges once all of them pass. When something is unclear, it goes back to the planning step that owns it. Nobody guesses.
+Tessera is a set of Claude Code **skills** and **subagents** in `~/.claude`. You type `/factory` and describe what you need in one sentence. Skills question ("grill") you until every decision is made, then write the intent, design, spec and Jira tickets. The spec and tickets are written by agents on **Opus 5.5 at high effort**, which ask you through your session. Cheap agents build every story test-first, in parallel. Five reviewer agents check every pull request. A GitHub Action, the **merge gate**, merges once all of them pass. When something is unclear, it goes back to the planning step that owns it. Nobody guesses.
 
 ## Five principles
 
@@ -18,7 +18,7 @@ Tessera is a set of Claude Code **skills** and **subagents** in `~/.claude`. You
 
 | Phase | Runs | Produces | Your part |
 |---|---|---|---|
-| Plan | `factory` runs `intent` → `to-design` (if UI) → `to-spec` → `to-tickets`. Spec and tickets: **spec-writer** / **ticket-writer** agents (Opus 5.5, xhigh) | intent.md, design files, spec.md, business rules, Jira epic / stories / subtasks | Answer the questions. Accept the prototype. |
+| Plan | `factory` runs `intent` → `to-design` (if UI) → `to-spec` → `to-tickets`. Spec and tickets: **spec-writer** / **ticket-writer** agents (Opus 5.5, high) | intent.md, design files, spec.md, business rules, Jira epic / stories / subtasks | Answer the questions. Accept the prototype. |
 | Build | `to-implement` + one **implementer** agent per story | One branch per story, built test-first: a red test commit, then a green code commit per slice | Answer the open question when a blocker needs a spec change. |
 | Review | `to-pr`, `to-review` + 4–5 **reviewer** agents | PRs, each reviewer's verdict as a PR comment | Answer spec or design questions a finding raises. Review risky (H1–H4) PRs. |
 | Merge | Merge gate (GitHub Action), `planning-cleanup` | Stories merged into the epic branch, then the epic merged into `develop`. Jira set to Done. | Add `human-approved` when asked. Finish stopped PRs. |
@@ -116,8 +116,8 @@ flowchart TB
 |---|---|---|
 | You run `/factory "…"` or `/intent "…"` | Grilling on the business reason, scope, constraints and success criteria → `intent.md`. It judges whether the UI changes and goes on to `to-design` or `to-spec` (`/intent` asks Start or Later first). If unsure, it asks you. | Never changed automatically: if it's wrong later, you run `intent-revise` |
 | Intent changes the UI | `to-design`: grill → design screens → publish an HTML prototype → you accept → screenshots + `design-changes.md` → commit on `plan/<feature>`. | No design files yet → `design-baseline` documents the current UI first |
-| Design accepted, or no UI | `to-spec` relays for its **spec-writer** agent (Opus 5.5, xhigh): it reads the codebase, grills business gaps and technical decisions → `spec.md` (B#, R#, technical design) + `docs/business-rules.md` → commit. A decision that changes the UI **pauses** it: `to-design` runs to the end (you accept, it commits), then the spec continues. | Never runs alongside `to-design` |
-| Spec written | `to-tickets` checks Jira; its **ticket-writer** agent (Opus 5.5, xhigh) writes epic, stories (max 3 points), subtasks → Jira. Renames `plan/` to `epic/<KEY>-…` (or `bug/…`) and pushes it. | Gap in the spec → offers `to-spec` with the change request |
+| Design accepted, or no UI | `to-spec` relays for its **spec-writer** agent (Opus 5.5, high): it reads the codebase, grills business gaps and technical decisions → `spec.md` (B#, R#, technical design) + `docs/business-rules.md` → commit. A decision that changes the UI **pauses** it: `to-design` runs to the end (you accept, it commits), then the spec continues. | Never runs alongside `to-design` |
+| Spec written | `to-tickets` checks Jira; its **ticket-writer** agent (Opus 5.5, high) writes epic, stories (max 3 points), subtasks → Jira. Renames `plan/` to `epic/<KEY>-…` (or `bug/…`) and pushes it. | Gap in the spec → offers `to-spec` with the change request |
 | Tickets published | `to-implement`: one Haiku **implementer** per *ready* story, all in parallel, each in its own worktree. Story → In Progress. | Ready = every blocking story is Done |
 | Implementer reports **DONE** | Subtasks → Done, branch pushed, story → In Review → `to-pr` opens the story PR → `to-review`. | Bug: final PR straight to `develop` |
 | Implementer reports **BLOCKED** | Loop count +1 (Jira label `factory-loops-n`) → `spec-triage` → A/B: `to-spec` revise → `to-tickets` update; C: `to-tickets` only → implementer resumes. | > 5 loops on a subtask → `factory-stopped` |
@@ -305,8 +305,8 @@ Jira is only accessed through `skills/jira/scripts/jira.mjs` (never MCP). Config
 
 | Agent | Model | Job |
 |---|---|---|
-| spec-writer | Opus 5.5 xhigh | Writes or revises the spec and business rules for `to-spec`, grilling you through the relay. |
-| ticket-writer | Opus 5.5 xhigh | Breaks the spec into epic, stories and subtasks and publishes them for `to-tickets`. |
+| spec-writer | Opus 5.5 high | Writes or revises the spec and business rules for `to-spec`, grilling you through the relay. |
+| ticket-writer | Opus 5.5 high | Breaks the spec into epic, stories and subtasks and publishes them for `to-tickets`. |
 | installer | Haiku 5.5 | Installs or upgrades a tool a step needs (Node.js, Playwright, `designmd`…) and answers in one line, so installs stay out of your session. |
 | implementer | Haiku 5.5 | Builds the subtasks of one story with the `tdd` skill: red test commit, green code commit, whole suite green. Checks every subtask before coding and reports all open questions at once. |
 | reviewer-code | Sonnet 5.5 | Documented standards, fit with the spec's technical design, error handling. Fowler code smells as judgement findings. |

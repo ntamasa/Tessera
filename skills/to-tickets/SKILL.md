@@ -1,6 +1,6 @@
 ---
 name: to-tickets
-description: Break an accepted spec.md into a Jira epic, stories or bugs, and subtasks detailed enough for a cheap coder model to implement without designing anything, then publish them through the jira skill. The ticket-writer agent (Opus, extra-high effort) does the work and asks the user through this skill, which relays its questions and the answers word for word. Use when the user has a spec.md from to-spec and wants tickets, or asks to run to-tickets.
+description: Break an accepted spec.md into a Jira epic, stories or bugs, and subtasks detailed enough for a cheap coder model to implement without designing anything, then publish them through the jira skill. The ticket-writer agent (Opus, high effort) does the work and asks the user through this skill, which relays its questions and the answers word for word. Use when the user has a spec.md from to-spec and wants tickets, or asks to run to-tickets.
 argument-hint: "[path to spec.md, default ./spec.md]"
 ---
 
