@@ -42,7 +42,7 @@ Evidence for every class: quote the source and the code. A `[rule]` finding, inc
 - For S or D, the comment is the user's decision: pass it to to-spec or to-design quoted, as decided, so they don't ask it again. Ask only what it leaves open.
 - X only when the code already does what it asks (say where) or it asks for no change (a question: answer it in the reason). The reason is the reply the user reads on the PR.
 
-Show the user one block per finding (reviewer, PR, story, the finding, the class, the evidence), then go straight on to step 3. Don't wait for a confirmation.
+Outside a factory run, show the user one block per finding (reviewer, PR, story, the finding, the class, the evidence); in a factory run, only the triage line per item. Then go straight on to step 3. Don't wait for a confirmation.
 
 ## 3. Fix
 
