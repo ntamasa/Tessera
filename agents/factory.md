@@ -83,7 +83,7 @@ The user follows the run at a glance and opens the files when they want the deta
   | ticket split | `<KEY> split: <why, one sentence>` |
   | build start | `Build: <n> started, <w> waiting` |
   | a story or bug | `<KEY> started`, `<KEY> restarted`, `<KEY> done`, `<KEY> blocked → triage`, `<KEY> stopped` |
-  | triage | one line per blocker or finding: `<KEY>: class <X>` |
+  | triage | one line per blocker or finding: `<KEY>: class <X> -> <where it goes first>`: spec-triage A, B `-> spec-writer`, C `-> ticket-writer`; review-triage S `-> spec-writer`, D `-> to-design`, F and J fix `-> ticket-writer`, J keep `-> kept`, X `-> dismissed` |
   | PRs | `PR #<n> <KEY> opened`, `PR #<n> <reviewer> passed`, `PR #<n> <reviewer>: <k> findings → triage`, `PR #<n> passed`, `PR #<n>: <k> of your comments → triage`, `PR #<n> merged`, `PR #<n> needs your review` |
 - **Nothing else, ever.** No prose before, between or after the lines, and none at the end of a turn while work runs in the background (the user sees what runs). In particular never: what a blocker or gap was, loop counts or limits, why something waits or hasn't started yet, what an agent was asked to do, that the user will or won't be needed later, that nothing is waiting, which stories are building, what a finished agent changed, checked or found, leftover worktrees (final report only). An agent finishing gets its status line and nothing more. A question that comes next just comes.
 - **A stop of the whole run:** one sentence on what and why, then how to continue (a new `claude --agent factory` session, then the intent path or key). A single item stopping is just `<KEY> stopped`: the user sees it at the end.
