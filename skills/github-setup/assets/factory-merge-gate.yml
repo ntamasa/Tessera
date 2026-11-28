@@ -4,13 +4,16 @@
 # Merges an open PR labelled "factory" (and not "factory-stopped") when, for its CURRENT head commit:
 #   - every reviewer in the PR body's <!-- factory-reviewers: ... --> marker has a valid pass comment
 #     (<!-- factory-review reviewer=<id> verdict=pass head=<sha> -->, by an owner, member or collaborator).
-#     A pass for an older head stays valid only if every newer commit is a merge of the target branch
+#     A pass for an older head stays valid only if every newer commit is a merge of the target branch,
+#     a commit already in the target (brought in by such a merge),
 #     or the cleanup commit (deletes planning files only);
 #   - it has no "needs-human-review" label, or it also has "human-approved";
 #   - a final PR (<!-- factory-final -->) no longer adds or changes any planning file (cleanup is in);
 #   - it is up to date with its target (if not, the gate merges the target into it and waits for CI);
 #   - every other check and status on the head commit is green, and there's no merge conflict.
 # A new push that isn't exempt removes "human-approved".
+# The run fails (red) when a PR is stuck: CI failed, merge conflict, branch update failed, a gate error,
+# or every reviewer passed but not on the head. Plain waiting (reviews pending, human label) stays green.
 #
 # Needs the repo secret FACTORY_GATE_TOKEN (a token of a user with write access): branch updates and merges
 # made with it trigger CI, which GitHub's own token doesn't.
@@ -71,7 +74,8 @@ jobs:
               await github.rest.issues.createComment({ owner, repo, issue_number: number, body: `${text}\n${marker}` });
             }
 
-            // True if every commit in from..to is a merge of the target branch or the cleanup commit.
+            // True if every commit in from..to is a merge of the target branch, a commit already in the
+            // target (brought in by such a merge), or the cleanup commit.
             async function onlyExempt(from, to, targetSha) {
               if (to.startsWith(from)) return true;
               let cmp;
@@ -79,6 +83,8 @@ jobs:
               catch { return false; }
               if (cmp.status !== 'ahead' || cmp.total_commits > cmp.commits.length) return false;
               for (const c of cmp.commits) {
+                const { data: inTarget } = await github.rest.repos.compareCommitsWithBasehead({ owner, repo, basehead: `${c.sha}...${targetSha}` });
+                if (['ahead', 'identical'].includes(inTarget.status)) continue;
                 if (c.parents.length === 2) {
                   const { data: x } = await github.rest.repos.compareCommitsWithBasehead({ owner, repo, basehead: `${c.parents[1].sha}...${targetSha}` });
                   if (!['ahead', 'identical'].includes(x.status)) return false;
@@ -94,6 +100,7 @@ jobs:
 
             async function gate(number) {
               const say = (m) => core.info(`#${number}: ${m}`);
+              const fail = (m) => { stuck.push(`#${number}: ${m}`); core.error(`#${number}: ${m}`); };
               let { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: number });
               const labels = pr.labels.map((l) => l.name);
               if (pr.state !== 'open' || pr.draft || !labels.includes('factory')) return say('not an open factory PR');
@@ -130,7 +137,11 @@ jobs:
                 if (!(v.sha in valid)) valid[v.sha] = await onlyExempt(v.sha, head, targetSha);
                 if (!valid[v.sha]) missing.push(`${r} (passed an older commit)`);
               }
-              if (missing.length) return say(`waiting for ${missing.join(', ')}`);
+              if (missing.length) {
+                const allPassed = required.every((r) => latest[r] && latest[r].verdict === 'pass');
+                if (allPassed) return fail(`every reviewer passed, but not on the head ${head.slice(0, 7)}: ${missing.join(', ')}`);
+                return say(`waiting for ${missing.join(', ')}`);
+              }
 
               if (labels.includes('needs-human-review') && !labels.includes('human-approved')) return say('waiting for the human-approved label');
 
@@ -148,7 +159,7 @@ jobs:
                 } catch (e) {
                   await commentOnce(number, comments, `<!-- factory-gate conflict head=${head} -->`,
                     `## ⛔ Merge gate: merge conflict\n\`${pr.head.ref}\` can't be updated from \`${pr.base.ref}\`. A human has to resolve it.`);
-                  return say(`update failed: ${e.message}`);
+                  return fail(`update failed: ${e.message}`);
                 }
               }
 
@@ -161,7 +172,7 @@ jobs:
                 if (failed.length) {
                   await commentOnce(number, comments, `<!-- factory-gate ci-failed head=${head} -->`,
                     `## ⛔ Merge gate: CI failed\nFailing on \`${head.slice(0, 7)}\`: ${failed.join(', ')}`);
-                  return say(`CI failed: ${failed.join(', ')}`);
+                  return fail(`CI failed: ${failed.join(', ')}`);
                 }
                 const pending = runs.some((r) => r.status !== 'completed') || combined.statuses.some((s) => s.state === 'pending');
                 if (!pending) break;
@@ -178,7 +189,7 @@ jobs:
               if (pr.mergeable === false) {
                 await commentOnce(number, comments, `<!-- factory-gate conflict head=${head} -->`,
                   `## ⛔ Merge gate: merge conflict\n\`${pr.head.ref}\` conflicts with \`${pr.base.ref}\`. A human has to resolve it.`);
-                return say('merge conflict');
+                return fail('merge conflict');
               }
 
               await github.rest.pulls.merge({ owner, repo, pull_number: number, sha: head, merge_method: 'merge' });
@@ -190,6 +201,8 @@ jobs:
               say('merged');
             }
 
+            const stuck = [];
             for (const n of await prNumbers()) {
-              try { await gate(n); } catch (e) { core.warning(`#${n}: ${e.message}`); }
+              try { await gate(n); } catch (e) { stuck.push(`#${n}: ${e.message}`); core.error(`#${n}: ${e.message}`); }
             }
+            if (stuck.length) core.setFailed(`stuck, needs a look: ${stuck.join('; ')}`);
